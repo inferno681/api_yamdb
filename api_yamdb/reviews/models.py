@@ -40,8 +40,10 @@ class Title(models.Model):
     year = models.IntegerField()
     rating = models.FloatField()
     description = models.TextField()
-    genre = models.ManyToManyField(Genre, on_delete=models.SET_NULL)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL)
+    genre = models.ManyToManyField(
+        Genre)
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return Title.format(
