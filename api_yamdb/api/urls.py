@@ -6,6 +6,7 @@ from api.views import (
     CommentViewSet,
     GenreViewSet,
     TitleViewSet,
+    SignUpViewSet,
     ReviewViewSet
 )
 
@@ -23,6 +24,7 @@ router_v1.register(
     CommentViewSet,
     basename='comment'
 )
+router_v1.register(r'auth/signup', SignUpViewSet, basename='signup')
 
 
 urlpatterns = [
