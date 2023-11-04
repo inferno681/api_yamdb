@@ -20,6 +20,8 @@ REVIEW = (
 
 
 class Genre(models.Model):
+    """Модель жанров."""
+
     name = models.CharField(max_length=256)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -28,6 +30,8 @@ class Genre(models.Model):
 
 
 class Category(models.Model):
+    """Модель категорий."""
+
     name = models.CharField(max_length=256)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -40,8 +44,7 @@ class Title(models.Model):
     year = models.IntegerField()
     rating = models.FloatField()
     description = models.TextField()
-    genre = models.ManyToManyField(
-        Genre)
+    genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -88,3 +91,11 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.text[:30]
+
+
+class GenreTitle(models.Model):
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
+    title = models.ForeignKey(Title, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'{self.genre} {self.title}'

@@ -1,7 +1,10 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, mixins, viewsets
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+
+from rest_framework import filters, mixins, viewsets, permissions
+from rest_framework.pagination import (
+    LimitOffsetPagination,
+    PageNumberPagination,
+)
 
 from reviews.models import Category, Comment, Genre, Review, Title
 from .serializers import (
@@ -13,16 +16,36 @@ from .serializers import (
 )
 
 
-class CategotyViewSet(viewsets.ModelViewSet):
+class CategotyViewSet(mixins.CreateModelMixin,
+                      mixins.DestroyModelMixin,
+                      mixins.ListModelMixin,
+                      viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+
+    def get_object(self):
+        category_slug = self.kwargs.get('pk')
+        category = get_object_or_404(Category, slug=category_slug)
+        return category
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(mixins.CreateModelMixin,
+                   mixins.DestroyModelMixin,
+                   mixins.ListModelMixin,
+                   viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     pagination_class = PageNumberPagination
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('name',)
+
+    def get_object(self):
+        genre_slug = self.kwargs.get('pk')
+        genre = get_object_or_404(Genre, slug=genre_slug)
+        return genre
 
 
 class TitleViewSet(viewsets.ModelViewSet):
@@ -31,7 +54,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        serializer.save(rating=0)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
