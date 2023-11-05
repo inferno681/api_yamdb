@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 User = get_user_model()
 TITLE = (
@@ -40,9 +41,13 @@ class Category(models.Model):
 
 
 class Title(models.Model):
+    """Модель произведений."""
+
     name = models.CharField(max_length=256)
     year = models.IntegerField()
-    rating = models.FloatField()
+    rating = models.FloatField(
+        validators=(MinValueValidator(1), MaxValueValidator(10)),
+    )
     description = models.TextField()
     genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(
@@ -65,9 +70,14 @@ class Review(models.Model):
     text = models.TextField()
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='reviews')
-    score = models.SmallIntegerField()
+    score = models.SmallIntegerField(
+        validators=(MinValueValidator(1), MaxValueValidator(10)),
+    )
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return REVIEW.format(
@@ -88,6 +98,9 @@ class Comment(models.Model):
     text = models.TextField()
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.text[:30]
