@@ -42,7 +42,7 @@ class User(AbstractUser):
                 code='invalid username'
             ),
             RegexValidator(
-                regex='me',
+                regex=r'^me$',
                 message=INVALID_USERNAME_ME,
                 code='invalid username',
                 inverse_match=True
