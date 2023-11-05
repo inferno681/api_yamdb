@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from django.contrib.auth.models import AbstractUser
-from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 
@@ -45,7 +44,7 @@ class User(AbstractUser):
                 code='invalid username'
             ),
             RegexValidator(
-                regex='me',
+                regex=r'^me$',
                 message=INVALID_USERNAME_ME,
                 code='invalid username',
                 inverse_match=True
