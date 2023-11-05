@@ -1,6 +1,7 @@
 from rest_framework import serializers, relations
 from rest_framework.relations import SlugRelatedField
 
+from reviews.models import Category, Comment, Genre, Review, Title, User
 from reviews.models import (
     Category, Comment, Genre, Review, Title, User, GenreTitle)
 
@@ -65,3 +66,15 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = '__all__'
         model = Comment
         read_only_fields = ('title', 'review')
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('email', 'username')
+        model = User
+
+
+class GetTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = ('username', 'confirmation_code')
+        model = User

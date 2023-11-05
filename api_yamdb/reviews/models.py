@@ -1,8 +1,18 @@
 from django.db import models
+from django.core.validators import RegexValidator
+from django.contrib.auth.models import AbstractUser
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-User = get_user_model()
+
+ADMIN = 'admin'
+MODERATOR = 'moderator'
+USER = 'user'
+ROLE_CHOICE = (
+    (ADMIN, ADMIN),
+    (MODERATOR, MODERATOR),
+    (USER, USER)
+)
 TITLE = (
     'Название: {name:.15}. '
     'Год: {year:.15}. '
@@ -18,6 +28,68 @@ REVIEW = (
     'Оценка: {score:.15}. '
     'Дата публикации: {pub_date:.15}. '
 )
+INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
+INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
+
+
+class User(AbstractUser):
+
+    username = models.CharField(
+        db_index=True,
+        max_length=150,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+\Z',
+                message=INVALID_USERNAME,
+                code='invalid username'
+            ),
+            RegexValidator(
+                regex='me',
+                message=INVALID_USERNAME_ME,
+                code='invalid username',
+                inverse_match=True
+            )]
+    )
+    email = models.EmailField(
+        db_index=True,
+        max_length=254,
+        unique=True
+    )
+    first_name = models.CharField(
+        max_length=150,
+        blank=True
+    )
+    last_name = models.CharField(
+        max_length=150,
+        blank=True
+    )
+    bio = models.TextField(blank=True,)
+    role = models.CharField(
+        max_length=15,
+        default=USER,
+        choices=ROLE_CHOICE
+    )
+    confirmation_code = models.CharField(
+        max_length=255,
+        blank=True
+    )
+    last_login = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def is_admin(self):
+        return self.role == ADMIN
+
+    @property
+    def is_moderator(self):
+        return self.role == MODERATOR
+
+    @property
+    def is_user(self):
+        return self.role == USER
+
+    def __str__(self):
+        return self.username
 
 
 class Genre(models.Model):
