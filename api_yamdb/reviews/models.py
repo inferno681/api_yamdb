@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 ADMIN = 'admin'
@@ -91,6 +93,8 @@ class User(AbstractUser):
 
 
 class Genre(models.Model):
+    """Модель жанров."""
+
     name = models.CharField(max_length=256)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -99,6 +103,8 @@ class Genre(models.Model):
 
 
 class Category(models.Model):
+    """Модель категорий."""
+
     name = models.CharField(max_length=256)
     slug = models.SlugField(max_length=50, unique=True)
 
@@ -107,12 +113,13 @@ class Category(models.Model):
 
 
 class Title(models.Model):
+    """Модель произведений."""
+
     name = models.CharField(max_length=256)
     year = models.IntegerField()
     rating = models.FloatField()
     description = models.TextField()
-    genre = models.ManyToManyField(
-        Genre)
+    genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -133,9 +140,14 @@ class Review(models.Model):
     text = models.TextField()
     author = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='reviews')
-    score = models.SmallIntegerField()
+    score = models.SmallIntegerField(
+        validators=(MinValueValidator(1), MaxValueValidator(10)),
+    )
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ('-pub_date',)
 
     def __str__(self):
         return REVIEW.format(
@@ -157,5 +169,16 @@ class Comment(models.Model):
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
 
+    class Meta:
+        ordering = ('-pub_date',)
+
     def __str__(self):
         return self.text[:30]
+
+
+class GenreTitle(models.Model):
+    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
+    title = models.ForeignKey(Title, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f'{self.genre} {self.title}'
