@@ -45,9 +45,7 @@ class Title(models.Model):
 
     name = models.CharField(max_length=256)
     year = models.IntegerField()
-    rating = models.FloatField(
-        validators=(MinValueValidator(1), MaxValueValidator(10)),
-    )
+    rating = models.FloatField()
     description = models.TextField()
     genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(

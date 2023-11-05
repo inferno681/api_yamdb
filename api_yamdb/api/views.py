@@ -14,6 +14,7 @@ from .serializers import (
     ReviewSerializer,
     TitleSerializer
 )
+from .permissions import IsAdminOrReadOnly
 
 
 class CategotyViewSet(mixins.CreateModelMixin,
@@ -22,7 +23,7 @@ class CategotyViewSet(mixins.CreateModelMixin,
                       viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    pagination_class = PageNumberPagination
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
@@ -38,7 +39,7 @@ class GenreViewSet(mixins.CreateModelMixin,
                    viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    pagination_class = PageNumberPagination
+    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
@@ -51,7 +52,6 @@ class GenreViewSet(mixins.CreateModelMixin,
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
-    pagination_class = LimitOffsetPagination
 
     def perform_create(self, serializer):
         serializer.save(rating=0)
@@ -59,7 +59,6 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    pagination_class = LimitOffsetPagination
 
     def get_title(self):
         title_id = self.kwargs.get('title_id')
