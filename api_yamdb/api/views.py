@@ -91,13 +91,15 @@ class SignUpViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                       confirmation_code=user.confirmation_code
                   ),
                   from_email=SENDER,
-                  recipient_list=[user.email,]
+                  recipient_list=(user.email,)
                   )
 
 
 class GetTokenViewSet(APIView):
 
     def post(self, request):
+        serializer = GetTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         try:
             user = User.objects.get(username=request.data['username'])
         except User.DoesNotExist:

@@ -6,11 +6,11 @@ from django.contrib.auth.models import AbstractUser
 ADMIN = 'admin'
 MODERATOR = 'moderator'
 USER = 'user'
-ROLE_CHOICE = [
+ROLE_CHOICE = (
     (ADMIN, ADMIN),
     (MODERATOR, MODERATOR),
     (USER, USER)
-]
+)
 TITLE = (
     'Название: {name:.15}. '
     'Год: {year:.15}. '
