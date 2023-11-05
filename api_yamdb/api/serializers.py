@@ -1,16 +1,7 @@
-from rest_framework import serializers, status
+from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
-from rest_framework.validators import UniqueTogetherValidator
-from django.core.mail import send_mail
-from django.contrib.auth.tokens import default_token_generator
-from rest_framework.response import Response
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
-
-SENDER = 'admin@ya_mdb.ru'
-SUBJECT = 'Код подтверждения'
-MESSAGE = ('Привет {username}! \n'
-           'Код для получения токена: {confirmation_code}')
 
 
 class TitleSerializer(serializers.ModelSerializer):

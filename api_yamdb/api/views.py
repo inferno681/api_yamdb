@@ -9,7 +9,6 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 
-from .serializers import SUBJECT, SENDER, MESSAGE
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from .serializers import (
     CategorySerializer,
@@ -20,6 +19,11 @@ from .serializers import (
     SignUpSerializer,
     TitleSerializer
 )
+
+SENDER = 'admin@ya_mdb.ru'
+SUBJECT = 'Код подтверждения'
+MESSAGE = ('Привет {username}! \n'
+           'Код для получения токена: {confirmation_code}')
 
 
 class CategotyViewSet(viewsets.ModelViewSet):
