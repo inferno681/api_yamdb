@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
+
 from rest_framework import filters, mixins, viewsets, status
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
@@ -8,8 +8,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-
-from rest_framework import filters, mixins, viewsets, permissions
 from rest_framework.pagination import (
     LimitOffsetPagination,
     PageNumberPagination,
@@ -23,7 +21,7 @@ from .serializers import (
     GetTokenSerializer,
     ReviewSerializer,
     SignUpSerializer,
-    TitleSerializer
+    TitleSerializer,
 )
 from .permissions import IsAdminOrReadOnly
 
@@ -37,9 +35,9 @@ class CategotyViewSet(mixins.CreateModelMixin,
                       mixins.DestroyModelMixin,
                       mixins.ListModelMixin,
                       viewsets.GenericViewSet):
+    permission_classes = (IsAdminOrReadOnly,)
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
