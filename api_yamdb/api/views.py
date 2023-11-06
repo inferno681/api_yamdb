@@ -40,11 +40,7 @@ class CategotyViewSet(mixins.CreateModelMixin,
     serializer_class = CategorySerializer
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-
-    def get_object(self):
-        category_slug = self.kwargs.get('pk')
-        category = get_object_or_404(Category, slug=category_slug)
-        return category
+    lookup_field = 'slug'
 
 
 class GenreViewSet(mixins.CreateModelMixin,
@@ -56,11 +52,7 @@ class GenreViewSet(mixins.CreateModelMixin,
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
-
-    def get_object(self):
-        genre_slug = self.kwargs.get('pk')
-        genre = get_object_or_404(Genre, slug=genre_slug)
-        return genre
+    lookup_field = 'slug'
 
 
 class TitleViewSet(viewsets.ModelViewSet):
