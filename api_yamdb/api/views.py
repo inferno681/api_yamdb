@@ -1,9 +1,13 @@
+import random
+import string
+
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, viewsets, status
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db import IntegrityError
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -23,14 +27,17 @@ from .serializers import (
     GetTokenSerializer,
     ReviewSerializer,
     SignUpSerializer,
-    TitleSerializer
+    TitleSerializer,
+    UserSerializer
 )
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsAdminOnly
 
 SENDER = 'admin@ya_mdb.ru'
 SUBJECT = 'Код подтверждения'
 MESSAGE = ('Привет {username}! \n'
            'Код для получения токена: {confirmation_code}')
+NEW_MESSAGE = ('Привет {username}! \n'
+               'Новый код для получения токена: {confirmation_code}')
 
 
 class CategotyViewSet(mixins.CreateModelMixin,
@@ -121,10 +128,11 @@ class SignUpViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     def perform_create(self, serializer):
         serializer.save()
         username = self.request.data['username']
-        user = User.objects.get(username=username)
         User.objects.filter(username=username).update(
-            confirmation_code=default_token_generator.make_token(user))
-        user.refresh_from_db()
+            confirmation_code=''.join(
+                random.choice(string.ascii_letters + string.digits
+                              ) for _ in range(10)))
+        user = User.objects.get(username=username)
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
                       username=user.username,
@@ -158,3 +166,25 @@ class GetTokenViewSet(APIView):
         return Response(
             {'confirmation_code': 'Неверный код подтверждения!'},
             status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    lookup_field = 'username'
+    '''permission_classes = (IsAdminOnly,)'''
+    filter_backends = (filters.SearchFilter, )
+    search_fields = ('username',)
+
+    @action(methods=('GET', 'PATCH'), detail=False, url_path='me')
+    def get_current_user(self, request):
+        serializer = UserSerializer(request.user)
+        if request.method == 'PATCH':
+            serializer = UserSerializer(
+                request.user,
+                data=request.data,
+                partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
