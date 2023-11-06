@@ -1,9 +1,14 @@
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
+from django.core.validators import RegexValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from reviews.models import (
     Category, Comment, Genre, Review, Title, User, GenreTitle)
+
+
+INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
+INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -82,6 +87,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
+
     class Meta:
         fields = ('email', 'username')
         model = User
@@ -90,4 +96,17 @@ class SignUpSerializer(serializers.ModelSerializer):
 class GetTokenSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('username', 'confirmation_code')
+        model = User
+
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role'
+        )
         model = User

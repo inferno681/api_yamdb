@@ -8,7 +8,9 @@ from api.views import (
     GetTokenViewSet,
     TitleViewSet,
     SignUpViewSet,
-    ReviewViewSet
+    ReviewViewSet,
+    UserViewSet
+
 )
 
 router_v1 = routers.DefaultRouter()
@@ -26,8 +28,9 @@ router_v1.register(
     basename='comment',
 )
 router_v1.register(r'auth/signup', SignUpViewSet, basename='signup')
+router_v1.register(r'users', UserViewSet, basename='users')
 
 urlpatterns = [
     path('v1/', include(router_v1.urls)),
-    path('v1/auth/token/', GetTokenViewSet.as_view(), name='get_token')
+    path('v1/auth/token/', GetTokenViewSet.as_view(), name='get_token'),
 ]
