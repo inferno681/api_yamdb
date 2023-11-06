@@ -123,6 +123,11 @@ class SignUpViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                   recipient_list=(user.email,)
                   )
 
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        response.status_code = 200
+        return response
+
 
 class GetTokenViewSet(APIView):
 
