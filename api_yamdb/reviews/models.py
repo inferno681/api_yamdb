@@ -96,7 +96,7 @@ class Genre(models.Model):
     slug = models.SlugField(max_length=50, unique=True)
 
     def __str__(self):
-        return self.slug
+        return self.name[:30]
 
 
 class Category(models.Model):
@@ -122,7 +122,7 @@ class Title(models.Model):
         related_name='titles')
 
     def __str__(self):
-        return Title.format(
+        return TITLE.format(
             name=self.name,
             year=self.year,
             rating=self.rating,
