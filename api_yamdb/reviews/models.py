@@ -33,46 +33,13 @@ INVALID_USERNAME_ME = 'Нельзя использовать имя пользо
 
 class User(AbstractUser):
 
-    username = models.CharField(
-        db_index=True,
-        max_length=150,
-        unique=True,
-        validators=[
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-                message=INVALID_USERNAME,
-                code='invalid username'
-            ),
-            RegexValidator(
-                regex=r'^me$',
-                message=INVALID_USERNAME_ME,
-                code='invalid username',
-                inverse_match=True
-            )]
-    )
-    email = models.EmailField(
-        db_index=True,
-        max_length=254,
-        unique=True
-    )
-    first_name = models.CharField(
-        max_length=150,
-        blank=True
-    )
-    last_name = models.CharField(
-        max_length=150,
-        blank=True
-    )
+    username = models.CharField(db_index=True, max_length=150, unique=True)
+    email = models.EmailField(db_index=True, max_length=254, unique=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
     bio = models.TextField(blank=True,)
-    role = models.CharField(
-        max_length=15,
-        default=USER,
-        choices=ROLE_CHOICE
-    )
-    confirmation_code = models.CharField(
-        max_length=255,
-        blank=True
-    )
+    role = models.CharField(max_length=15, default=USER, choices=ROLE_CHOICE)
+    confirmation_code = models.CharField(max_length=255, blank=True)
     last_login = models.DateTimeField(auto_now_add=True)
 
     @property
