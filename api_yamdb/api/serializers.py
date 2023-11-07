@@ -1,4 +1,4 @@
-from rest_framework import serializers, relations
+from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
@@ -23,10 +23,11 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
-    genre = serializers.SlugRelatedField(many=True,
-                                         queryset=Genre.objects.all(),
-                                         slug_field='slug'
-                                         )
+    genre = serializers.SlugRelatedField(
+        many=True,
+        queryset=Genre.objects.all(),
+        slug_field='slug',
+    )
     description = serializers.CharField(required=False)
 
     class Meta:
@@ -34,14 +35,26 @@ class TitleSerializer(serializers.ModelSerializer):
         model = Title
         read_only_fields = ('rating',)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        title = Title.objects.get(id=data['id'])
+        data['category'] = {
+            'name': title.category.name,
+            'slug': title.category.slug
+        }
+        data['genre'] = [
+            {
+                'name': genre.name,
+                'slug': genre.slug,
+            } for genre in title.genre.all()
+        ]
+        return data
+
     def create(self, validated_data):
         genres = validated_data.pop('genre')
         title = Title.objects.create(**validated_data)
         for genre in genres:
-            current_genre = Genre.objects.get(slug=genre)
-            GenreTitle.objects.create(
-                genre=current_genre, title=title)
-            title.genre.add(current_genre)
+            GenreTitle.objects.create(genre_id=genre, title_id=title)
         return title
 
 

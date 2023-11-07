@@ -1,9 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from django.contrib.auth.models import AbstractUser
-from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
-
 
 ADMIN = 'admin'
 MODERATOR = 'moderator'
@@ -33,7 +31,6 @@ INVALID_USERNAME_ME = 'Нельзя использовать имя пользо
 
 
 class User(AbstractUser):
-
     username = models.CharField(
         db_index=True,
         max_length=150,
@@ -64,7 +61,7 @@ class User(AbstractUser):
         max_length=150,
         blank=True
     )
-    bio = models.TextField(blank=True,)
+    bio = models.TextField(blank=True)
     role = models.CharField(
         max_length=15,
         default=USER,
@@ -99,7 +96,7 @@ class Genre(models.Model):
     slug = models.SlugField(max_length=50, unique=True)
 
     def __str__(self):
-        return self.name[:30]
+        return self.slug
 
 
 class Category(models.Model):
@@ -117,11 +114,12 @@ class Title(models.Model):
 
     name = models.CharField(max_length=256)
     year = models.IntegerField()
-    rating = models.FloatField()
-    description = models.TextField()
+    rating = models.FloatField(null=True)
+    description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True, blank=True)
+        Category, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='titles')
 
     def __str__(self):
         return Title.format(
@@ -177,8 +175,8 @@ class Comment(models.Model):
 
 
 class GenreTitle(models.Model):
-    genre = models.ForeignKey(Genre, on_delete=models.CASCADE)
-    title = models.ForeignKey(Title, on_delete=models.CASCADE)
+    genre_id = models.ForeignKey(Genre, on_delete=models.CASCADE)
+    title_id = models.ForeignKey(Title, on_delete=models.CASCADE)
 
     def __str__(self):
         return f'{self.genre} {self.title}'

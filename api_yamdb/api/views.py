@@ -1,19 +1,16 @@
 from django.shortcuts import get_object_or_404
 
 from rest_framework import filters, mixins, viewsets, status
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from rest_framework.response import Response
-from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-from rest_framework.pagination import (
-    LimitOffsetPagination,
-    PageNumberPagination,
-)
+from rest_framework.pagination import LimitOffsetPagination
 
-from reviews.models import Category, Comment, Genre, Review, Title, User
+from django_filters.rest_framework import DjangoFilterBackend
+
+from reviews.models import Category, Genre, Review, Title, User
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -24,6 +21,7 @@ from .serializers import (
     TitleSerializer,
 )
 from .permissions import IsAdminOrReadOnly
+from .filters import TitleFilter
 
 SENDER = 'admin@ya_mdb.ru'
 SUBJECT = 'Код подтверждения'
@@ -58,9 +56,10 @@ class GenreViewSet(mixins.CreateModelMixin,
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
-
-    def perform_create(self, serializer):
-        serializer.save(rating=0)
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = TitleFilter
+    permission_classes = (IsAdminOrReadOnly,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
