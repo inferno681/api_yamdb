@@ -111,17 +111,28 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
 
 
-class SignUpViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class SignUpView(APIView):
     serializer_class = SignUpSerializer
 
-    def perform_create(self, serializer):
-        serializer.save()
-        username = self.request.data['username']
-        User.objects.filter(username=username).update(
-            confirmation_code=''.join(
-                random.choice(string.ascii_letters + string.digits
-                              ) for _ in range(10)))
-        user = User.objects.get(username=username)
+    def post(self, request):
+        serializer = SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        username = serializer.validated_data['username']
+        try:
+            user, created = User.objects.get_or_create(
+                username=username,
+                email=email
+            )
+        except IntegrityError:
+            return Response(
+                'Такой логин или email уже существуют',
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        user.confirmation_code = ''.join(
+            random.choice(
+                string.ascii_letters + string.digits
+            ) for _ in range(10))
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
                       username=user.username,
@@ -130,14 +141,10 @@ class SignUpViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                   from_email=SENDER,
                   recipient_list=(user.email,)
                   )
-
-    def create(self, request, *args, **kwargs):
-        response = super().create(request, *args, **kwargs)
-        response.status_code = 200
-        return response
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class GetTokenViewSet(APIView):
+class GetTokenView(APIView):
 
     def post(self, request):
         serializer = GetTokenSerializer(data=request.data)
@@ -161,11 +168,13 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     lookup_field = 'username'
-    '''permission_classes = (IsAdminOnly,)'''
+    permission_classes = (IsAdminOnly,)
     filter_backends = (filters.SearchFilter, )
     search_fields = ('username',)
 
-    @action(methods=('GET', 'PATCH'), detail=False, url_path='me')
+    @action(methods=('GET', 'PATCH'),
+            detail=False, url_path='me',
+            permission_classes=(IsAuthenticatedOrReadOnly,))
     def get_current_user(self, request):
         serializer = UserSerializer(request.user)
         if request.method == 'PATCH':
