@@ -123,7 +123,8 @@ class GetTokenSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(max_length=254, required=True)
+    email = serializers.EmailField(max_length=254, required=True, validators=(
+        UniqueValidator(message=EMAIL_OCCUPIED, queryset=User.objects.all()),))
     username = serializers.CharField(
         max_length=150,
         required=True,
@@ -138,6 +139,10 @@ class UserSerializer(serializers.ModelSerializer):
                 message=INVALID_USERNAME_ME,
                 code='invalid username',
                 inverse_match=True
+            ),
+            UniqueValidator(
+                message=USERNAME_OCCUPIED,
+                queryset=User.objects.all()
             )
         )
     )
@@ -152,10 +157,3 @@ class UserSerializer(serializers.ModelSerializer):
             'role'
         )
         model = User
-        read_only = ('role',)
-
-    def get_fields(self):
-        fields = super().get_fields()
-        if self.context['request'].user.is_admin:
-            fields['role'].read_only = False
-        return fields

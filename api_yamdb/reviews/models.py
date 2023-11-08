@@ -56,6 +56,9 @@ class User(AbstractUser):
     def __str__(self):
         return self.username
 
+    class Meta:
+        ordering = ('id',)
+
 
 class Genre(models.Model):
     """Модель жанров."""
