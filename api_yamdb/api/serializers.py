@@ -1,9 +1,19 @@
-from rest_framework import serializers
+import re
+from rest_framework import serializers, relations
 from rest_framework.relations import SlugRelatedField
+from django.core.validators import RegexValidator
+from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from reviews.models import (
     Category, Comment, Genre, Review, Title, User, GenreTitle)
+
+
+INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
+INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
+INVALID_USERNAME_EMAIL = 'Такой пользователь уже существует'
+EMAIL_OCCUPIED = 'Пользователь с таким email уже существует'
+USERNAME_OCCUPIED = 'Пользователь с таким username уже существует'
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -82,6 +92,25 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=254, required=True)
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=(
+            RegexValidator(
+                regex=r'^[\w.@+-]+\Z',
+                message=INVALID_USERNAME,
+                code='invalid username'
+            ),
+            RegexValidator(
+                regex=r'^me$',
+                message=INVALID_USERNAME_ME,
+                code='invalid username',
+                inverse_match=True
+            )
+        )
+    )
+
     class Meta:
         fields = ('email', 'username')
         model = User
@@ -90,4 +119,41 @@ class SignUpSerializer(serializers.ModelSerializer):
 class GetTokenSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('username', 'confirmation_code')
+        model = User
+
+
+class UserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=254, required=True, validators=(
+        UniqueValidator(message=EMAIL_OCCUPIED, queryset=User.objects.all()),))
+    username = serializers.CharField(
+        max_length=150,
+        required=True,
+        validators=(
+            RegexValidator(
+                regex=r'^[\w.@+-]+\Z',
+                message=INVALID_USERNAME,
+                code='invalid username'
+            ),
+            RegexValidator(
+                regex=r'^me$',
+                message=INVALID_USERNAME_ME,
+                code='invalid username',
+                inverse_match=True
+            ),
+            UniqueValidator(
+                message=USERNAME_OCCUPIED,
+                queryset=User.objects.all()
+            )
+        )
+    )
+
+    class Meta:
+        fields = (
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'bio',
+            'role'
+        )
         model = User

@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,6 +20,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework_simplejwt',
     'rest_framework',
     'django_filters',
     'reviews',
@@ -116,3 +118,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
 
 AUTH_USER_MODEL = 'reviews.User'
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=10),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
