@@ -4,7 +4,7 @@ import string
 from django.shortcuts import get_object_or_404
 from rest_framework import filters, mixins, viewsets, status
 from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import IntegrityError
@@ -179,13 +179,15 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     lookup_field = 'username'
-    permission_classes = (IsAdminOnly,)
+    http_method_names = ('get', 'post', 'patch', 'delete')
+    permission_classes = (IsAuthenticated, IsAdminOnly)
     filter_backends = (filters.SearchFilter, )
     search_fields = ('username',)
 
     @action(methods=('GET', 'PATCH'),
-            detail=False, url_path='me',
-            permission_classes=(IsAuthenticatedOrReadOnly,))
+            detail=False,
+            url_path='me',
+            permission_classes=(IsAuthenticated,))
     def get_current_user(self, request):
         serializer = UserSerializer(request.user)
         if request.method == 'PATCH':
@@ -194,6 +196,6 @@ class UserViewSet(viewsets.ModelViewSet):
                 data=request.data,
                 partial=True)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            serializer.save(role=request.user.role)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.data)
