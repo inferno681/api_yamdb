@@ -1,3 +1,4 @@
+from datetime import date
 from django.core.validators import RegexValidator
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
@@ -70,12 +71,18 @@ class TitleSerializer(serializers.ModelSerializer):
             GenreTitle.objects.create(genre_id=genre, title_id=title)
         return title
 
+    def validate_year(self, value):
+        year = date.today().year
+        if value > year:
+            raise serializers.ValidationError('Проверьте год!')
+        return value
+
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(read_only=True, slug_field='username')
 
     class Meta:
-        fields = ('__all__')
+        exclude = ('title',)
         model = Review
         read_only_fields = ('title',)
 
@@ -87,7 +94,7 @@ class CommentSerializer(serializers.ModelSerializer):
     review = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
-        fields = '__all__'
+        exclude = ('title', 'review')
         model = Comment
         read_only_fields = ('title', 'review')
 
