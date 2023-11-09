@@ -1,4 +1,5 @@
 from django.urls import include, path
+
 from rest_framework import routers
 
 from api.views import (
@@ -9,8 +10,7 @@ from api.views import (
     TitleViewSet,
     SignUpView,
     ReviewViewSet,
-    UserViewSet
-
+    UserViewSet,
 )
 
 router_v1 = routers.DefaultRouter()
