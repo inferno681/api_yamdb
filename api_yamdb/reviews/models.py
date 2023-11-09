@@ -1,6 +1,6 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 ADMIN = 'admin'
 MODERATOR = 'moderator'
@@ -25,12 +25,12 @@ REVIEW = (
     'Оценка: {score:.15}. '
     'Дата публикации: {pub_date:.15}. '
 )
-INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
-INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
 
 
 class User(AbstractUser):
+    """Модель пользователя."""
 
+    username = models.CharField(db_index=True, max_length=150, unique=True)
     email = models.EmailField(db_index=True, max_length=254, unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)

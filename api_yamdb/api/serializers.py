@@ -3,16 +3,19 @@ from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
 
-from django.core.validators import RegexValidator
-
-from reviews.models import Category, Comment, Genre, Review, Title, User
 from reviews.models import (
-    Category, Comment, Genre, Review, Title, User, GenreTitle)
+    Category,
+    Comment,
+    Genre,
+    GenreTitle,
+    Review,
+    Title,
+    User)
+
 
 INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
 INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
-INVALID_USERNAME_EMAIL = 'Такой пользователь уже существует'
-EMAIL_OCCUPIED = 'Пользователь с таким email уже существует'
+EMAIL_OCCUPIED = {'email': 'Пользователь с таким email уже существует'}
 USERNAME_OCCUPIED = 'Пользователь с таким username уже существует'
 
 
@@ -115,6 +118,9 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class GetTokenSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(max_length=150, required=True)
+    confirmation_code = serializers.CharField(max_length=255, required=True)
+
     class Meta:
         fields = ('username', 'confirmation_code')
         model = User
