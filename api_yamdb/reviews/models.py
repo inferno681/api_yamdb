@@ -1,6 +1,6 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 ADMIN = 'admin'
 MODERATOR = 'moderator'
@@ -25,11 +25,11 @@ REVIEW = (
     'Оценка: {score:.15}. '
     'Дата публикации: {pub_date:.15}. '
 )
-INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
-INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
 
 
 class User(AbstractUser):
+    """Модель пользователя."""
+
     username = models.CharField(db_index=True, max_length=150, unique=True)
     email = models.EmailField(db_index=True, max_length=254, unique=True)
     first_name = models.CharField(max_length=150, blank=True)
@@ -37,7 +37,6 @@ class User(AbstractUser):
     bio = models.TextField(blank=True, )
     role = models.CharField(max_length=15, default=USER, choices=ROLE_CHOICE)
     confirmation_code = models.CharField(max_length=255, blank=True)
-    last_login = models.DateTimeField(auto_now_add=True)
 
     @property
     def is_admin(self):
@@ -67,6 +66,9 @@ class Genre(models.Model):
     def __str__(self):
         return self.name[:30]
 
+    class Meta:
+        ordering = ('id',)
+
 
 class Category(models.Model):
     """Модель категорий."""
@@ -76,6 +78,9 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name[:30]
+
+    class Meta:
+        ordering = ('id',)
 
 
 class Title(models.Model):
@@ -99,6 +104,9 @@ class Title(models.Model):
             genre=self.genre,
             category=self.category
         )
+
+    class Meta:
+        ordering = ('-year',)
 
 
 class Review(models.Model):

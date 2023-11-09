@@ -147,6 +147,7 @@ class SignUpView(APIView):
             random.choice(
                 string.ascii_letters + string.digits
             ) for _ in range(10))
+        user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
                       username=user.username,
@@ -172,7 +173,7 @@ class GetTokenView(APIView):
         if request.data.get('confirmation_code') == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
             return Response({'token': str(token)},
-                            status=status.HTTP_201_CREATED)
+                            status=status.HTTP_200_OK)
         return Response(
             {'confirmation_code': 'Неверный код подтверждения!'},
             status=status.HTTP_400_BAD_REQUEST)
