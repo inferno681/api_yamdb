@@ -13,7 +13,6 @@ from reviews.models import (
     Title,
     User)
 
-
 INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
 INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
 EMAIL_OCCUPIED = {'email': 'Пользователь с таким email уже существует'}
@@ -91,7 +90,6 @@ class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
-    review = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         exclude = ('title', 'review')
