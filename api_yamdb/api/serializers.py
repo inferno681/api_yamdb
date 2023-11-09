@@ -3,6 +3,7 @@ from rest_framework import serializers, relations
 from rest_framework.relations import SlugRelatedField
 from django.core.validators import RegexValidator
 from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
+from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from reviews.models import (
@@ -29,11 +30,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class TitleSerializer(serializers.ModelSerializer):
-    category = serializers.SlugRelatedField(
+    category = SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'
     )
-    genre = serializers.SlugRelatedField(
+    genre = SlugRelatedField(
         many=True,
         queryset=Genre.objects.all(),
         slug_field='slug',
@@ -69,9 +70,7 @@ class TitleSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    author = SlugRelatedField(
-        read_only=True, slug_field='username'
-    )
+    author = SlugRelatedField(read_only=True, slug_field='username')
 
     class Meta:
         fields = ('__all__')
