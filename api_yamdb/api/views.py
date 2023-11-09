@@ -147,6 +147,7 @@ class SignUpView(APIView):
             random.choice(
                 string.ascii_letters + string.digits
             ) for _ in range(10))
+        user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
                       username=user.username,
