@@ -1,3 +1,5 @@
+from statistics import mean
+
 from django.shortcuts import get_object_or_404
 
 from rest_framework import filters, mixins, viewsets, status
@@ -7,6 +9,8 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
 from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.exceptions import ValidationError
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -20,7 +24,7 @@ from .serializers import (
     SignUpSerializer,
     TitleSerializer,
 )
-from .permissions import IsAdminOrReadOnly
+from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
 from .filters import TitleFilter
 
 SENDER = 'admin@ya_mdb.ru'
@@ -64,18 +68,23 @@ class TitleViewSet(viewsets.ModelViewSet):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-
-    def get_title(self):
-        title_id = self.kwargs.get('title_id')
-        title = get_object_or_404(Title, pk=title_id)
-        return title
+    queryset = Review.objects.all()
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
+    http_method_names = ('get', 'post', 'patch', 'delete')
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, title=self.get_title())
+        title_id = self.kwargs.get('title_id')
+        title = get_object_or_404(Title, pk=title_id)
+        if Review.objects.filter(
+                author=self.request.user,
+                title=title,
+        ).exists():
+            raise ValidationError(
+                {'review': ['You are already review this title.']})
 
-    def get_queryset(self):
-        queryset = self.get_title().reviews.all()
-        return queryset
+        serializer.save(author=self.request.user, title=title)
+        title.rating = mean(review.score for review in title.reviews.all())
+        title.save()
 
 
 class CommentViewSet(viewsets.ModelViewSet):

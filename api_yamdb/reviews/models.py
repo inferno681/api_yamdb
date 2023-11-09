@@ -145,12 +145,14 @@ class Review(models.Model):
         'Дата добавления', auto_now_add=True, db_index=True)
 
     class Meta:
+        unique_together = ('title_id', 'author')
         ordering = ('-pub_date',)
 
     def __str__(self):
         return REVIEW.format(
             title=self.title,
-            text=self.author,
+            text=self.text,
+            author=self.author,
             score=self.score,
             pub_date=self.pub_date,
         )
