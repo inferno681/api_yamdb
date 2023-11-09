@@ -28,7 +28,7 @@ from .serializers import (
     TitleSerializer,
     UserSerializer
 )
-from .permissions import IsAdminOrReadOnly, IsAdminOnly
+from .permissions import IsAdminOrReadOnly, IsAdminOnly, IsAuthorOrStuffOrReadOnly
 from .filters import TitleFilter
 
 SENDER = 'admin@ya_mdb.ru'
@@ -90,7 +90,9 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    http_method_names = ('get', 'post', 'patch', 'delete')
     pagination_class = LimitOffsetPagination
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrStuffOrReadOnly)
 
     def get_title(self):
         title_id = self.kwargs.get('title_id')
