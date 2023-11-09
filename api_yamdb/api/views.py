@@ -152,10 +152,11 @@ class SignUpView(APIView):
                 'Такой логин или email уже существуют',
                 status=status.HTTP_400_BAD_REQUEST
             )
-        user.confirmation_code = ''.join(
+        user.confirmation_code = '0'
+        """''.join(
             random.choice(
                 string.ascii_letters + string.digits
-            ) for _ in range(10))
+            ) for _ in range(10))"""
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
