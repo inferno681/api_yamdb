@@ -1,22 +1,18 @@
 from statistics import mean
-
 import random
 import string
 
 from django.shortcuts import get_object_or_404
-
-from rest_framework import filters, mixins, viewsets, status
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.db import IntegrityError
+
+from rest_framework import filters, mixins, viewsets, status
+from rest_framework.permissions import (
+    IsAuthenticatedOrReadOnly, IsAuthenticated)
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.views import APIView
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import ValidationError
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -32,8 +28,12 @@ from .serializers import (
     TitleSerializer,
     UserSerializer
 )
-from .permissions import IsAdminOrReadOnly, IsAuthorOrReadOnly
-from .permissions import IsAdminOrReadOnly, IsAdminOnly, IsAuthorOrStuffOrReadOnly
+from .permissions import (
+    IsAdminOrReadOnly,
+    IsAdminOnly,
+    IsAuthorOrStuffOrReadOnly,
+    IsAuthorOrReadOnly
+)
 from .filters import TitleFilter
 
 SENDER = 'admin@ya_mdb.ru'
@@ -101,7 +101,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     http_method_names = ('get', 'post', 'patch', 'delete')
-    pagination_class = LimitOffsetPagination
     permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrStuffOrReadOnly)
 
     def get_title(self):
@@ -185,7 +184,7 @@ class UserViewSet(viewsets.ModelViewSet):
     lookup_field = 'username'
     http_method_names = ('get', 'post', 'patch', 'delete')
     permission_classes = (IsAuthenticated, IsAdminOnly)
-    filter_backends = (filters.SearchFilter, )
+    filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
 
     @action(methods=('GET', 'PATCH'),

@@ -1,14 +1,12 @@
-import re
-from rest_framework import serializers, relations
+from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
+from rest_framework.validators import UniqueValidator
+
 from django.core.validators import RegexValidator
-from rest_framework.validators import UniqueValidator, UniqueTogetherValidator
-from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from reviews.models import Category, Comment, Genre, Review, Title, User
 from reviews.models import (
     Category, Comment, Genre, Review, Title, User, GenreTitle)
-
 
 INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
 INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'

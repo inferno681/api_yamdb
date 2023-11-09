@@ -1,5 +1,4 @@
 from django.db import models
-from django.core.validators import RegexValidator
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -31,12 +30,11 @@ INVALID_USERNAME_ME = 'Нельзя использовать имя пользо
 
 
 class User(AbstractUser):
-
     username = models.CharField(db_index=True, max_length=150, unique=True)
     email = models.EmailField(db_index=True, max_length=254, unique=True)
     first_name = models.CharField(max_length=150, blank=True)
     last_name = models.CharField(max_length=150, blank=True)
-    bio = models.TextField(blank=True,)
+    bio = models.TextField(blank=True, )
     role = models.CharField(max_length=15, default=USER, choices=ROLE_CHOICE)
     confirmation_code = models.CharField(max_length=255, blank=True)
     last_login = models.DateTimeField(auto_now_add=True)
