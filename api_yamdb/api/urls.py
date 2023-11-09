@@ -5,10 +5,12 @@ from api.views import (
     CategotyViewSet,
     CommentViewSet,
     GenreViewSet,
-    GetTokenViewSet,
+    GetTokenView,
     TitleViewSet,
-    SignUpViewSet,
-    ReviewViewSet
+    SignUpView,
+    ReviewViewSet,
+    UserViewSet
+
 )
 
 router_v1 = routers.DefaultRouter()
@@ -25,9 +27,10 @@ router_v1.register(
     CommentViewSet,
     basename='comment',
 )
-router_v1.register(r'auth/signup', SignUpViewSet, basename='signup')
+router_v1.register(r'users', UserViewSet, basename='users')
 
 urlpatterns = [
     path('v1/', include(router_v1.urls)),
-    path('v1/auth/token/', GetTokenViewSet.as_view(), name='get_token')
+    path('v1/auth/signup/', SignUpView.as_view(), name='get_token'),
+    path('v1/auth/token/', GetTokenView.as_view(), name='signup'),
 ]
