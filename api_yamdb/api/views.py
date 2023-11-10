@@ -29,7 +29,6 @@ from .serializers import (CategorySerializer,
                           TitleSerializer,
                           UserSerializer)
 
-
 SENDER = 'admin@ya_mdb.ru'
 SUBJECT = 'Код подтверждения'
 MESSAGE = ('Привет {username}! \n'
