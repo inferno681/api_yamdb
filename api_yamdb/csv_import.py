@@ -34,7 +34,7 @@ con = sqlite3.connect('db.sqlite3')
 cur = con.cursor()
 files = os.listdir(DIRECTORY)
 for file in files:
-    with open(f'{DIRECTORY}/{file}', 'r') as csvfile:
+    with open(f'{DIRECTORY}/{file}', 'r', encoding='utf-8') as csvfile:
         spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
         table_name = DATA[file]
         csv_file = [i for i in spamreader]
