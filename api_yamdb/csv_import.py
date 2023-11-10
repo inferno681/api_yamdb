@@ -1,6 +1,6 @@
-import sqlite3
-import os
 import csv
+import os
+import sqlite3
 
 DIRECTORY = "./static/data"
 DATA = {
@@ -46,7 +46,7 @@ for file in files:
             required_columns, columns, values_data)
         placeholders = ', '.join(['?'] * len(columns))
         query = f"""
-        INSERT INTO {table_name} ({', '.join(columns)}) 
+        INSERT INTO {table_name} ({', '.join(columns)})
         VALUES ({placeholders})"""
         cur.executemany(query, validate_data)
         con.commit()

@@ -1,39 +1,34 @@
-from statistics import mean
 import random
 import string
+from statistics import mean
 
-from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
-from django.db import IntegrityError
-
-from rest_framework import filters, mixins, viewsets, status
-from rest_framework.permissions import (
-    IsAuthenticatedOrReadOnly, IsAuthenticated, AllowAny)
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.views import APIView
-from rest_framework.exceptions import ValidationError
-
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import (AllowAny,
+                                        IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from reviews.models import Category, Genre, Review, Title, User
-from .serializers import (
-    CategorySerializer,
-    CommentSerializer,
-    GenreSerializer,
-    GetTokenSerializer,
-    ReviewSerializer,
-    SignUpSerializer,
-    TitleSerializer,
-    UserSerializer
-)
-from .permissions import (
-    IsAdminOrReadOnly,
-    IsAdminOnly,
-    IsAuthorOrStuffOrReadOnly
-)
 from .filters import TitleFilter
+from .permissions import (IsAdminOnly,
+                          IsAdminOrReadOnly,
+                          IsAuthorOrStuffOrReadOnly)
+from reviews.models import Category, Genre, Review, Title, User
+from .serializers import (CategorySerializer,
+                          CommentSerializer,
+                          GenreSerializer,
+                          GetTokenSerializer,
+                          ReviewSerializer,
+                          SignUpSerializer,
+                          TitleSerializer,
+                          UserSerializer)
+
 
 SENDER = 'admin@ya_mdb.ru'
 SUBJECT = 'Код подтверждения'
@@ -41,6 +36,12 @@ MESSAGE = ('Привет {username}! \n'
            'Код для получения токена: {confirmation_code}')
 NEW_MESSAGE = ('Привет {username}! \n'
                'Новый код для получения токена: {confirmation_code}')
+SECOND_REVIEW_PROHIBITION_MESSAGE = {
+    'review': ['You are already review this title.']}
+USERNAME_OR_EMAIL_OCCUPIED_MESSAGE = 'Такой логин или email уже существуют'
+USERNAME_DOESNOT_EXIST_MESSAGE = {'username': 'Пользователь не найден!'}
+INVALID_CONFIRMATION_CODE_MESSAGE = {
+    'confirmation_code': 'Неверный код подтверждения!'}
 
 
 class CategotyViewSet(mixins.CreateModelMixin,
@@ -96,8 +97,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         if title.reviews.filter(
                 author=self.request.user
         ).exists():
-            raise ValidationError(
-                {'review': ['You are already review this title.']})
+            raise ValidationError(SECOND_REVIEW_PROHIBITION_MESSAGE)
         serializer.save(author=self.request.user, title=title)
         title.rating = mean(review.score for review in title.reviews.all())
         title.save()
@@ -138,23 +138,11 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email']
-        username = serializer.validated_data['username']
-        try:
-            user, created = User.objects.get_or_create(
-                username=username,
-                email=email
-            )
-        except IntegrityError:
-            return Response(
-                'Такой логин или email уже существуют',
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        user.confirmation_code = '0'
-        """''.join(
+        user, created = User.objects.get_or_create(**serializer.validated_data)
+        user.confirmation_code = ''.join(
             random.choice(
                 string.ascii_letters + string.digits
-            ) for _ in range(10))"""
+            ) for _ in range(10))
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
@@ -177,14 +165,14 @@ class GetTokenView(APIView):
             user = User.objects.get(username=request.data['username'])
         except User.DoesNotExist:
             return Response(
-                {'username': 'Пользователь не найден!'},
+                USERNAME_DOESNOT_EXIST_MESSAGE,
                 status=status.HTTP_404_NOT_FOUND)
         if request.data.get('confirmation_code') == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
             return Response({'token': str(token)},
                             status=status.HTTP_200_OK)
         return Response(
-            {'confirmation_code': 'Неверный код подтверждения!'},
+            INVALID_CONFIRMATION_CODE_MESSAGE,
             status=status.HTTP_400_BAD_REQUEST)
 
 
