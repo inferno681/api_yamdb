@@ -1,4 +1,5 @@
 from datetime import date
+
 from django.core.validators import RegexValidator
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
@@ -17,6 +18,19 @@ INVALID_USERNAME = 'Имя пользователя содержит недоп�
 INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
 EMAIL_OCCUPIED = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED = 'Пользователь с таким username уже существует'
+USERNAME_VALIDATORS = (
+    RegexValidator(
+        regex=r'^[\w.@+-]+\Z',
+        message=INVALID_USERNAME,
+        code='invalid username'
+    ),
+    RegexValidator(
+        regex=r'^me$',
+        message=INVALID_USERNAME_ME,
+        code='invalid username',
+        inverse_match=True
+    )
+)
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -70,11 +84,10 @@ class TitleSerializer(serializers.ModelSerializer):
             GenreTitle.objects.create(genre=genre, title=title)
         return title
 
-    def validate_year(self, value):
-        year = date.today().year
-        if value > year:
+    def validate_year(self, year):
+        if year > date.today().year:
             raise serializers.ValidationError('Проверьте год!')
-        return value
+        return year
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -102,19 +115,7 @@ class SignUpSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
         required=True,
-        validators=(
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-                message=INVALID_USERNAME,
-                code='invalid username'
-            ),
-            RegexValidator(
-                regex=r'^me$',
-                message=INVALID_USERNAME_ME,
-                code='invalid username',
-                inverse_match=True
-            )
-        )
+        validators=USERNAME_VALIDATORS
     )
 
     class Meta:
@@ -154,23 +155,9 @@ class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
         required=True,
-        validators=(
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-                message=INVALID_USERNAME,
-                code='invalid username'
-            ),
-            RegexValidator(
-                regex=r'^me$',
-                message=INVALID_USERNAME_ME,
-                code='invalid username',
-                inverse_match=True
-            ),
-            UniqueValidator(
-                message=USERNAME_OCCUPIED,
-                queryset=User.objects.all()
-            )
-        )
+        validators=USERNAME_VALIDATORS + (UniqueValidator(
+            message=USERNAME_OCCUPIED,
+            queryset=User.objects.all()),)
     )
 
     class Meta:
