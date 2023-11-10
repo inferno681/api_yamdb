@@ -1,23 +1,36 @@
 from datetime import date
+
 from django.core.validators import RegexValidator
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
 
-from reviews.models import (
-    Category,
-    Comment,
-    Genre,
-    GenreTitle,
-    Review,
-    Title,
-    User)
+from reviews.models import (Category,
+                            Comment,
+                            Genre,
+                            GenreTitle,
+                            Review,
+                            Title,
+                            User)
 
-
-INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
-INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
-EMAIL_OCCUPIED = {'email': 'Пользователь с таким email уже существует'}
-USERNAME_OCCUPIED = 'Пользователь с таким username уже существует'
+INVALID_USERNAME_MESSAGE = 'Имя пользователя содержит недопустимые символы.'
+INVALID_USERNAME_ME_MESSAGE = 'Нельзя использовать имя пользователя <me>'
+EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
+USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
+USERNAME_VALIDATORS = (
+    RegexValidator(
+        regex=r'^[\w.@+-]+\Z',
+        message=INVALID_USERNAME_MESSAGE,
+        code='invalid username'
+    ),
+    RegexValidator(
+        regex=r'^me$',
+        message=INVALID_USERNAME_ME_MESSAGE,
+        code='invalid username',
+        inverse_match=True
+    )
+)
+WRONG_YEAR_MESSAGE = 'Проверьте год!'
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -68,14 +81,13 @@ class TitleSerializer(serializers.ModelSerializer):
         genres = validated_data.pop('genre')
         title = Title.objects.create(**validated_data)
         for genre in genres:
-            GenreTitle.objects.create(genre_id=genre, title_id=title)
+            GenreTitle.objects.create(genre=genre, title=title)
         return title
 
-    def validate_year(self, value):
-        year = date.today().year
-        if value > year:
-            raise serializers.ValidationError('Проверьте год!')
-        return value
+    def validate_year(self, year):
+        if year > date.today().year:
+            raise serializers.ValidationError(WRONG_YEAR_MESSAGE)
+        return year
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -91,7 +103,6 @@ class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         read_only=True, slug_field='username'
     )
-    review = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         exclude = ('title', 'review')
@@ -104,24 +115,30 @@ class SignUpSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
         required=True,
-        validators=(
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-                message=INVALID_USERNAME,
-                code='invalid username'
-            ),
-            RegexValidator(
-                regex=r'^me$',
-                message=INVALID_USERNAME_ME,
-                code='invalid username',
-                inverse_match=True
-            )
-        )
+        validators=USERNAME_VALIDATORS
     )
 
     class Meta:
         fields = ('email', 'username')
         model = User
+
+    def validate(self, data):
+        if not User.objects.filter(
+                username=data['username'], email=data['email']).exists():
+            user1 = User.objects.filter(username=data['username'])
+            user2 = User.objects.filter(email=data['email'])
+            if user1 and user2:
+                raise serializers.ValidationError({
+                    'username': USERNAME_OCCUPIED_MESSAGE,
+                    'email': EMAIL_OCCUPIED_MESSAGE,
+                })
+            if user1:
+                raise serializers.ValidationError(
+                    {'username': USERNAME_OCCUPIED_MESSAGE})
+            if user2:
+                raise serializers.ValidationError(
+                    {'email': EMAIL_OCCUPIED_MESSAGE})
+        return data
 
 
 class GetTokenSerializer(serializers.ModelSerializer):
@@ -135,27 +152,14 @@ class GetTokenSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=254, required=True, validators=(
-        UniqueValidator(message=EMAIL_OCCUPIED, queryset=User.objects.all()),))
+        UniqueValidator(message=EMAIL_OCCUPIED_MESSAGE,
+                        queryset=User.objects.all()),))
     username = serializers.CharField(
         max_length=150,
         required=True,
-        validators=(
-            RegexValidator(
-                regex=r'^[\w.@+-]+\Z',
-                message=INVALID_USERNAME,
-                code='invalid username'
-            ),
-            RegexValidator(
-                regex=r'^me$',
-                message=INVALID_USERNAME_ME,
-                code='invalid username',
-                inverse_match=True
-            ),
-            UniqueValidator(
-                message=USERNAME_OCCUPIED,
-                queryset=User.objects.all()
-            )
-        )
+        validators=USERNAME_VALIDATORS + (UniqueValidator(
+            message=USERNAME_OCCUPIED_MESSAGE,
+            queryset=User.objects.all()),)
     )
 
     class Meta:
