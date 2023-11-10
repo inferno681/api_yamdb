@@ -1,6 +1,6 @@
-import sqlite3
-import os
 import csv
+import os
+import sqlite3
 
 DIRECTORY = "./static/data"
 DATA = {
@@ -34,7 +34,7 @@ con = sqlite3.connect('db.sqlite3')
 cur = con.cursor()
 files = os.listdir(DIRECTORY)
 for file in files:
-    with open(f'{DIRECTORY}/{file}', 'r') as csvfile:
+    with open(f'{DIRECTORY}/{file}', 'r', encoding='utf-8') as csvfile:
         spamreader = csv.reader(csvfile, delimiter=',', quotechar='"')
         table_name = DATA[file]
         csv_file = [i for i in spamreader]
@@ -46,7 +46,7 @@ for file in files:
             required_columns, columns, values_data)
         placeholders = ', '.join(['?'] * len(columns))
         query = f"""
-        INSERT INTO {table_name} ({', '.join(columns)}) 
+        INSERT INTO {table_name} ({', '.join(columns)})
         VALUES ({placeholders})"""
         cur.executemany(query, validate_data)
         con.commit()
