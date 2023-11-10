@@ -15,7 +15,7 @@ from reviews.models import (
 
 INVALID_USERNAME = 'Имя пользователя содержит недопустимые символы.'
 INVALID_USERNAME_ME = 'Нельзя использовать имя пользователя "me"'
-EMAIL_OCCUPIED = {'email': 'Пользователь с таким email уже существует'}
+EMAIL_OCCUPIED = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED = 'Пользователь с таким username уже существует'
 
 
@@ -67,7 +67,7 @@ class TitleSerializer(serializers.ModelSerializer):
         genres = validated_data.pop('genre')
         title = Title.objects.create(**validated_data)
         for genre in genres:
-            GenreTitle.objects.create(genre_id=genre, title_id=title)
+            GenreTitle.objects.create(genre=genre, title=title)
         return title
 
     def validate_year(self, value):
@@ -120,6 +120,23 @@ class SignUpSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('email', 'username')
         model = User
+
+    def validate(self, data):
+        if not User.objects.filter(
+                username=data['username'], email=data['email']).exists():
+            user1 = User.objects.filter(username=data['username'])
+            user2 = User.objects.filter(email=data['email'])
+            if user1 and user2:
+                raise serializers.ValidationError({
+                    'username': USERNAME_OCCUPIED,
+                    'email': USERNAME_OCCUPIED,
+                })
+            if user1:
+                raise serializers.ValidationError(
+                    {'username': USERNAME_OCCUPIED})
+            if user2:
+                raise serializers.ValidationError({'email': USERNAME_OCCUPIED})
+        return data
 
 
 class GetTokenSerializer(serializers.ModelSerializer):
