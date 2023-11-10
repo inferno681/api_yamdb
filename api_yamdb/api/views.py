@@ -8,7 +8,7 @@ from django.db import IntegrityError
 
 from rest_framework import filters, mixins, viewsets, status
 from rest_framework.permissions import (
-    IsAuthenticatedOrReadOnly, IsAuthenticated)
+    IsAuthenticatedOrReadOnly, IsAuthenticated, AllowAny)
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -31,8 +31,7 @@ from .serializers import (
 from .permissions import (
     IsAdminOrReadOnly,
     IsAdminOnly,
-    IsAuthorOrStuffOrReadOnly,
-    IsAuthorOrReadOnly
+    IsAuthorOrStuffOrReadOnly
 )
 from .filters import TitleFilter
 
@@ -80,7 +79,7 @@ class TitleViewSet(viewsets.ModelViewSet):
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
     queryset = Review.objects.all()
-    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly)
+    permission_classes = (IsAuthenticatedOrReadOnly, IsAuthorOrStuffOrReadOnly)
     http_method_names = ('get', 'post', 'patch', 'delete')
 
     def get_title(self):
@@ -134,6 +133,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 class SignUpView(APIView):
     serializer_class = SignUpSerializer
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
@@ -168,6 +168,7 @@ class SignUpView(APIView):
 
 
 class GetTokenView(APIView):
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = GetTokenSerializer(data=request.data)
@@ -192,7 +193,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     lookup_field = 'username'
     http_method_names = ('get', 'post', 'patch', 'delete')
-    permission_classes = (IsAuthenticated, IsAdminOnly)
+    permission_classes = (IsAuthenticated, IsAdminOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
 
