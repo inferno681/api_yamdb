@@ -38,7 +38,7 @@ FIELDS_LENGTH_LIMITS = {
         'first_name': 150,
         'last_name': 150,
         'role': max(len(role) for _, role in ROLE_CHOICE),
-        'confirmation_code': 255,
+        'confirmation_code': 6,
     },
     'genre_category': {
         'name': 256,

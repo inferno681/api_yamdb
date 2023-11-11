@@ -83,7 +83,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'text', 'author', 'score', 'pub_date')
         model = Review
-        read_only_fields = ('title',)
 
     def validate(self, data):
         request = self.context.get('request')
@@ -105,7 +104,6 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'text', 'author', 'pub_date')
         model = Comment
-        read_only_fields = ('title', 'review')
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -141,8 +139,12 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class GetTokenSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=150, required=True)
-    confirmation_code = serializers.CharField(max_length=255, required=True)
+    username = serializers.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        required=True)
+    confirmation_code = serializers.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
+        required=True)
 
     class Meta:
         fields = ('username', 'confirmation_code')
@@ -150,11 +152,14 @@ class GetTokenSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(max_length=254, required=True, validators=(
-        UniqueValidator(message=EMAIL_OCCUPIED_MESSAGE,
-                        queryset=User.objects.all()),))
+    email = serializers.EmailField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['email'],
+        required=True,
+        validators=(
+            UniqueValidator(message=EMAIL_OCCUPIED_MESSAGE,
+                            queryset=User.objects.all()),))
     username = serializers.CharField(
-        max_length=150,
+        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
         required=True,
         validators=(validate_username, UniqueValidator(
             message=USERNAME_OCCUPIED_MESSAGE,
