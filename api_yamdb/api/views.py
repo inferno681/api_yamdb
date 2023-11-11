@@ -51,6 +51,9 @@ INVALID_CONFIRMATION_CODE_MESSAGE = {
     'confirmation_code': 'Неверный код подтверждения!'}
 LOOKUP_FIELD = 'slug'
 
+EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
+USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
+
 
 class CategotyViewSet(mixins.CreateModelMixin,
                       mixins.DestroyModelMixin,
@@ -137,6 +140,20 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if not User.objects.filter(**serializer.validated_data).exists():
+            user1 = User.objects.filter(username=request.data['username'])
+            user2 = User.objects.filter(email=request.data['email'])
+            if user1 and user2:
+                raise ValidationError({
+                    'username': [USERNAME_OCCUPIED_MESSAGE],
+                    'email': [EMAIL_OCCUPIED_MESSAGE],
+                })
+            if user1:
+                raise ValidationError(
+                    {'username': [USERNAME_OCCUPIED_MESSAGE]})
+            if user2:
+                raise ValidationError(
+                    {'email': [EMAIL_OCCUPIED_MESSAGE]})
         user, created = User.objects.get_or_create(**serializer.validated_data)
         user.confirmation_code = '0'  # random.randint(100000, 999999)
         user.save()

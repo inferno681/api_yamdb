@@ -106,7 +106,7 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
 
 
-class SignUpSerializer(serializers.ModelSerializer):
+class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(
         max_length=FIELDS_LENGTH_LIMITS['user']['email'], required=True)
     username = serializers.CharField(
@@ -115,40 +115,14 @@ class SignUpSerializer(serializers.ModelSerializer):
         validators=(validate_username,),
     )
 
-    class Meta:
-        fields = ('email', 'username')
-        model = User
 
-    def validate(self, data):
-        if not User.objects.filter(
-                username=data['username'], email=data['email']).exists():
-            user1 = User.objects.filter(username=data['username'])
-            user2 = User.objects.filter(email=data['email'])
-            if user1 and user2:
-                raise serializers.ValidationError({
-                    'username': USERNAME_OCCUPIED_MESSAGE,
-                    'email': EMAIL_OCCUPIED_MESSAGE,
-                })
-            if user1:
-                raise serializers.ValidationError(
-                    {'username': USERNAME_OCCUPIED_MESSAGE})
-            if user2:
-                raise serializers.ValidationError(
-                    {'email': EMAIL_OCCUPIED_MESSAGE})
-        return data
-
-
-class GetTokenSerializer(serializers.ModelSerializer):
+class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=FIELDS_LENGTH_LIMITS['user']['username'],
         required=True)
     confirmation_code = serializers.CharField(
         max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
         required=True)
-
-    class Meta:
-        fields = ('username', 'confirmation_code')
-        model = User
 
 
 class UserSerializer(serializers.ModelSerializer):
