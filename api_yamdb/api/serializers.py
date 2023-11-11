@@ -126,19 +126,6 @@ class GetTokenSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['email'],
-        required=True,
-        validators=(
-            UniqueValidator(message=EMAIL_OCCUPIED_MESSAGE,
-                            queryset=User.objects.all()),))
-    username = serializers.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
-        required=True,
-        validators=(validate_username, UniqueValidator(
-            message=USERNAME_OCCUPIED_MESSAGE,
-            queryset=User.objects.all()),)
-    )
 
     class Meta:
         fields = (
@@ -150,3 +137,7 @@ class UserSerializer(serializers.ModelSerializer):
             'role'
         )
         model = User
+
+    def validate_username(self, username):
+        validate_username(username)
+        return username

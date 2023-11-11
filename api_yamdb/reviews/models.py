@@ -209,12 +209,12 @@ class Review(ReviewTitleAbstractModel):
         verbose_name = MODELS_LOCALISATIONS['review'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['review'][1]
         unique_together = ('title_id', 'author')  # удалить как разкоментим код
-        # constraints = [
-        #     models.UniqueConstraint(
-        #         fields=('title_id', 'author'),
-        #         name='unique_title_author'
-        #     )
-        # ]
+        constraints = (
+            models.UniqueConstraint(
+                fields=('title', 'author', ),
+                name='unique review'
+            ),
+        )
 
     def __str__(self):
         return REVIEW.format(
