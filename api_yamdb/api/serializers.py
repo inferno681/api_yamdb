@@ -1,19 +1,26 @@
+from django.shortcuts import get_object_or_404
+
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
+from django.core.exceptions import ValidationError
 
-from reviews.models import (Category,
-                            Comment,
-                            Genre,
-                            GenreTitle,
-                            Review,
-                            Title,
-                            User)
+from reviews.models import (
+    Category,
+    Comment,
+    Genre,
+    GenreTitle,
+    Review,
+    Title,
+    User,
+    FIELDS_LENGTH_LIMITS,
+)
 from .validators import validate_username, validate_year
-
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
+SECOND_REVIEW_PROHIBITION_MESSAGE = {
+    'review': ['You are already review this title.']}
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -42,7 +49,8 @@ class TitleSerializer(serializers.ModelSerializer):
     year = serializers.IntegerField(validators=(validate_year,))
 
     class Meta:
-        fields = '__all__'
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
         model = Title
         read_only_fields = ('rating',)
 
@@ -73,28 +81,40 @@ class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(read_only=True, slug_field='username')
 
     class Meta:
-        exclude = ('title',)
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
         model = Review
         read_only_fields = ('title',)
+
+    def validate(self, data):
+        request = self.context.get('request')
+        title = get_object_or_404(
+            Title,
+            pk=request.parser_context.get('kwargs').get('title_id'),
+        )
+        if title.reviews.filter(
+                author=request.user).exists() and request.method != 'PATCH':
+            raise serializers.ValidationError(
+                SECOND_REVIEW_PROHIBITION_MESSAGE)
+        return data
 
 
 class CommentSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
-        read_only=True, slug_field='username'
-    )
+        read_only=True, slug_field='username')
 
     class Meta:
-        exclude = ('title', 'review')
+        fields = ('id', 'text', 'author', 'pub_date')
         model = Comment
         read_only_fields = ('title', 'review')
 
 
 class SignUpSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(max_length=254, required=True)
+    email = serializers.EmailField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['email'], required=True)
     username = serializers.CharField(
-        max_length=150,
+        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
         required=True,
-        validators=(validate_username,)
+        validators=(validate_username,),
     )
 
     class Meta:

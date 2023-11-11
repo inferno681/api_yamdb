@@ -98,10 +98,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         title = self.get_title()
-        if title.reviews.filter(
-                author=self.request.user
-        ).exists():
-            raise ValidationError(SECOND_REVIEW_PROHIBITION_MESSAGE)
         serializer.save(author=self.request.user, title=title)
         title.rating = self.get_queryset().aggregate(Avg('score')).get(
             'score__avg')
