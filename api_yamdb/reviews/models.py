@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
+from api.validators import validate_year
+
 ADMIN = 'admin'
 MODERATOR = 'moderator'
 USER = 'user'
@@ -87,7 +89,7 @@ class Title(models.Model):
     """Модель произведений."""
 
     name = models.CharField(max_length=256)
-    year = models.IntegerField()
+    year = models.IntegerField(validators=(validate_year,))
     rating = models.FloatField(null=True)
     description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, through='GenreTitle')

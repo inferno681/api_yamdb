@@ -1,5 +1,3 @@
-from datetime import date
-
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
@@ -11,12 +9,11 @@ from reviews.models import (Category,
                             Review,
                             Title,
                             User)
-from .validators import validate_username
+from .validators import validate_username, validate_year
 
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
-WRONG_YEAR_MESSAGE = 'Проверьте год!'
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -42,6 +39,7 @@ class TitleSerializer(serializers.ModelSerializer):
         slug_field='slug',
     )
     description = serializers.CharField(required=False)
+    year = serializers.IntegerField(validators=(validate_year,))
 
     class Meta:
         fields = '__all__'
@@ -69,11 +67,6 @@ class TitleSerializer(serializers.ModelSerializer):
         for genre in genres:
             GenreTitle.objects.create(genre=genre, title=title)
         return title
-
-    def validate_year(self, year):
-        if year > date.today().year:
-            raise serializers.ValidationError(WRONG_YEAR_MESSAGE)
-        return year
 
 
 class ReviewSerializer(serializers.ModelSerializer):
