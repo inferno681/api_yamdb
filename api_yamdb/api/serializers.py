@@ -1,6 +1,5 @@
 from datetime import date
 
-from django.core.validators import RegexValidator
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
@@ -12,24 +11,11 @@ from reviews.models import (Category,
                             Review,
                             Title,
                             User)
+from .validators import validate_username
 
-INVALID_USERNAME_MESSAGE = 'Имя пользователя содержит недопустимые символы.'
-INVALID_USERNAME_ME_MESSAGE = 'Нельзя использовать имя пользователя <me>'
+
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
-USERNAME_VALIDATORS = (
-    RegexValidator(
-        regex=r'^[\w.@+-]+\Z',
-        message=INVALID_USERNAME_MESSAGE,
-        code='invalid username'
-    ),
-    RegexValidator(
-        regex=r'^me$',
-        message=INVALID_USERNAME_ME_MESSAGE,
-        code='invalid username',
-        inverse_match=True
-    )
-)
 WRONG_YEAR_MESSAGE = 'Проверьте год!'
 
 
@@ -115,7 +101,7 @@ class SignUpSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
         required=True,
-        validators=USERNAME_VALIDATORS
+        validators=(validate_username,)
     )
 
     class Meta:
@@ -157,7 +143,7 @@ class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=150,
         required=True,
-        validators=USERNAME_VALIDATORS + (UniqueValidator(
+        validators=(validate_username, UniqueValidator(
             message=USERNAME_OCCUPIED_MESSAGE,
             queryset=User.objects.all()),)
     )
