@@ -138,10 +138,7 @@ class SignUpView(APIView):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user, created = User.objects.get_or_create(**serializer.validated_data)
-        user.confirmation_code = ''.join(
-            random.choice(
-                string.ascii_letters + string.digits
-            ) for _ in range(10))
+        user.confirmation_code = '0'
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
