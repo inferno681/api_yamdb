@@ -8,9 +8,9 @@ ADMIN = 'admin'
 MODERATOR = 'moderator'
 USER = 'user'
 ROLE_CHOICE = (
-    (ADMIN, ADMIN),
-    (MODERATOR, MODERATOR),
-    (USER, USER)
+    (ADMIN, "Админ"),
+    (MODERATOR, "Модератор"),
+    (USER, "Пользователь")
 )
 TITLE = (
     'Название: {name:.15}. '
@@ -37,7 +37,7 @@ FIELDS_LENGTH_LIMITS = {
         'email': 254,
         'first_name': 150,
         'last_name': 150,
-        'role': 15,
+        'role': max(len(role) for _, role in ROLE_CHOICE),
         'confirmation_code': 255,
     },
     'genre_category': {
@@ -47,6 +47,15 @@ FIELDS_LENGTH_LIMITS = {
     'title': {
         'name': 256,
     }
+}
+
+MODELS_LOCALISATIONS = {
+    'user': ('Пользователь', 'Пользователи'),
+    'genre': ('Жанр', 'Жанры'),
+    'category': ('Категория', 'Категории'),
+    'title': ('Произведение', 'Произведения'),
+    'review': ('Обзор', 'Обзоры'),
+    'comment': ('Комментарий', 'Комментарии'),
 }
 
 
@@ -99,6 +108,8 @@ class User(AbstractUser):
 
     class Meta:
         ordering = ('-date_joined',)
+        verbose_name = MODELS_LOCALISATIONS['user'][0]
+        verbose_name_plural = MODELS_LOCALISATIONS['user'][1]
 
 
 class GenreCategoryAbstractModel(models.Model):
@@ -122,13 +133,17 @@ class GenreCategoryAbstractModel(models.Model):
 class Genre(GenreCategoryAbstractModel):
     """Модель жанров."""
 
-    pass
+    class Meta(GenreCategoryAbstractModel.Meta):
+        verbose_name = MODELS_LOCALISATIONS['genre'][0]
+        verbose_name_plural = MODELS_LOCALISATIONS['genre'][1]
 
 
 class Category(GenreCategoryAbstractModel):
     """Модель категорий."""
 
-    pass
+    class Meta(GenreCategoryAbstractModel.Meta):
+        verbose_name = MODELS_LOCALISATIONS['category'][0]
+        verbose_name_plural = MODELS_LOCALISATIONS['category'][1]
 
 
 class Title(models.Model):
@@ -137,7 +152,7 @@ class Title(models.Model):
     name = models.CharField(
         max_length=FIELDS_LENGTH_LIMITS['title']['name'])
     year = models.IntegerField(validators=(validate_year,))
-    rating = models.FloatField(null=True)
+    rating = models.FloatField(null=True)  # удалить позже
     description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(
@@ -160,6 +175,8 @@ class Title(models.Model):
 
     class Meta:
         ordering = ('-year', '-rating', 'name')
+        verbose_name = MODELS_LOCALISATIONS['title'][0]
+        verbose_name_plural = MODELS_LOCALISATIONS['title'][1]
 
 
 class ReviewTitleAbstractModel(models.Model):
@@ -189,6 +206,8 @@ class Review(ReviewTitleAbstractModel):
     )
 
     class Meta(ReviewTitleAbstractModel.Meta):
+        verbose_name = MODELS_LOCALISATIONS['review'][0]
+        verbose_name_plural = MODELS_LOCALISATIONS['review'][1]
         unique_together = ('title_id', 'author')  # удалить как разкоментим код
         # constraints = [
         #     models.UniqueConstraint(
@@ -212,6 +231,10 @@ class Comment(ReviewTitleAbstractModel):
 
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE, related_name='comments')
+
+    class Meta(ReviewTitleAbstractModel.Meta):
+        verbose_name = MODELS_LOCALISATIONS['comment'][0]
+        verbose_name_plural = MODELS_LOCALISATIONS['comment'][1]
 
     def __str__(self):
         return self.text[:30]
