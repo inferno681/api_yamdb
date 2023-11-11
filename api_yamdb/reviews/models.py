@@ -27,22 +27,64 @@ REVIEW = (
     'Оценка: {score:.15}. '
     'Дата публикации: {pub_date:.15}. '
 )
+SCORE_VALUES = {
+    'min_value': 1,
+    'max_value': 10,
+}
+FIELDS_LENGTH_LIMITS = {
+    'user': {
+        'username': 150,
+        'email': 254,
+        'first_name': 150,
+        'last_name': 150,
+        'role': 15,
+        'confirmation_code': 255,
+    },
+    'genre_category': {
+        'name': 256,
+        'slug': 50,
+    },
+    'title': {
+        'name': 256,
+    }
+}
 
 
 class User(AbstractUser):
     """Модель пользователя."""
 
-    username = models.CharField(db_index=True, max_length=150, unique=True)
-    email = models.EmailField(db_index=True, max_length=254, unique=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
-    bio = models.TextField(blank=True, )
-    role = models.CharField(max_length=15, default=USER, choices=ROLE_CHOICE)
-    confirmation_code = models.CharField(max_length=255, blank=True)
+    username = models.CharField(
+        db_index=True,
+        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        unique=True,
+    )
+    email = models.EmailField(
+        db_index=True,
+        max_length=FIELDS_LENGTH_LIMITS['user']['email'],
+        unique=True,
+    )
+    first_name = models.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['first_name'],
+        blank=True,
+    )
+    last_name = models.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['last_name'],
+        blank=True,
+    )
+    bio = models.TextField(blank=True)
+    role = models.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['role'],
+        default=USER,
+        choices=ROLE_CHOICE,
+    )
+    confirmation_code = models.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
+        blank=True,
+    )
 
     @property
     def is_admin(self):
-        return self.role == ADMIN or self.is_superuser or self.is_staff
+        return self.role == ADMIN or self.is_staff or self.is_superuser
 
     @property
     def is_moderator(self):
@@ -56,46 +98,55 @@ class User(AbstractUser):
         return self.username
 
     class Meta:
-        ordering = ('id',)
+        ordering = ('-date_joined',)
 
 
-class Genre(models.Model):
+class GenreCategoryAbstractModel(models.Model):
+    """Абстрактная модель для жанров и категорий."""
+
+    name = models.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['genre_category']['name'])
+    slug = models.SlugField(
+        max_length=FIELDS_LENGTH_LIMITS['genre_category']['slug'],
+        unique=True,
+    )
+
+    def __str__(self):
+        return self.name[:30]
+
+    class Meta:
+        abstract = True
+        ordering = ('slug',)
+
+
+class Genre(GenreCategoryAbstractModel):
     """Модель жанров."""
 
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.name[:30]
-
-    class Meta:
-        ordering = ('id',)
+    pass
 
 
-class Category(models.Model):
+class Category(GenreCategoryAbstractModel):
     """Модель категорий."""
 
-    name = models.CharField(max_length=256)
-    slug = models.SlugField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.name[:30]
-
-    class Meta:
-        ordering = ('id',)
+    pass
 
 
 class Title(models.Model):
     """Модель произведений."""
 
-    name = models.CharField(max_length=256)
+    name = models.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['title']['name'])
     year = models.IntegerField(validators=(validate_year,))
     rating = models.FloatField(null=True)
     description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='titles')
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='titles',
+    )
 
     def __str__(self):
         return TITLE.format(
@@ -108,24 +159,43 @@ class Title(models.Model):
         )
 
     class Meta:
-        ordering = ('-year',)
+        ordering = ('-year', '-rating', 'name')
 
 
-class Review(models.Model):
-    title = models.ForeignKey(
-        Title, on_delete=models.CASCADE, related_name='reviews')
-    text = models.TextField()
+class ReviewTitleAbstractModel(models.Model):
+    """Абстрактная модель для отзывов и комментариев."""
+
     author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='reviews')
-    score = models.SmallIntegerField(
-        validators=(MinValueValidator(1), MaxValueValidator(10)),
-    )
+        User, on_delete=models.CASCADE, related_name='%(class)ss')
+    title = models.ForeignKey(
+        Title, on_delete=models.CASCADE, related_name='%(class)ss')
+    text = models.TextField()
     pub_date = models.DateTimeField(
         'Дата добавления', auto_now_add=True, db_index=True)
 
     class Meta:
-        unique_together = ('title_id', 'author')
+        abstract = True
         ordering = ('-pub_date',)
+
+
+class Review(ReviewTitleAbstractModel):
+    """Модель отзывов."""
+
+    score = models.SmallIntegerField(
+        validators=(
+            MinValueValidator(SCORE_VALUES['min_value']),
+            MaxValueValidator(SCORE_VALUES['max_value']),
+        ),
+    )
+
+    class Meta(ReviewTitleAbstractModel.Meta):
+        unique_together = ('title_id', 'author')  # удалить как разкоментим код
+        # constraints = [
+        #     models.UniqueConstraint(
+        #         fields=('title_id', 'author'),
+        #         name='unique_title_author'
+        #     )
+        # ]
 
     def __str__(self):
         return REVIEW.format(
@@ -137,19 +207,11 @@ class Review(models.Model):
         )
 
 
-class Comment(models.Model):
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='comments')
-    title = models.ForeignKey(
-        Title, on_delete=models.CASCADE, related_name='comments')
+class Comment(ReviewTitleAbstractModel):
+    """Модель комментариев."""
+
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE, related_name='comments')
-    text = models.TextField()
-    pub_date = models.DateTimeField(
-        'Дата добавления', auto_now_add=True, db_index=True)
-
-    class Meta:
-        ordering = ('-pub_date',)
 
     def __str__(self):
         return self.text[:30]
