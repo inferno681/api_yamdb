@@ -20,17 +20,20 @@ TITLE = (
     'Жанр: {genre:.15}. '
     'Категория: {category:.15}. '
 )
-REVIEW = (
+CONTENT = (
     'Название: {title:.15}. '
     'Текст: {text:.15}. '
     'Автор: {author:.15}. '
-    'Оценка: {score:.15}. '
     'Дата публикации: {pub_date:.15}. '
 )
-SCORE_VALUES = {
-    'min_value': 1,
-    'max_value': 10,
-}
+COMMENT = ('{content_str}'
+           'Комментарий: {comment:.15}')
+REVIEW = ('{content_str}'
+          'Оценка: {score:.15}')
+GENRETITLE = ('Жанр: {genre:.15}. '
+              'Произведение: {title:.15}. ')
+MIN_SCORE = 1
+MAX_SCORE = 10
 LENGTH_LIMITS_USER_FIELDS = 150
 LENGTH_LIMITS_USER_EMAIL = 254
 LENGTH_LIMITS_USER_ROLE = max(len(role) for _, role in ROLE_CHOICE)
@@ -166,7 +169,7 @@ class Title(models.Model):
         verbose_name_plural = MODELS_LOCALISATIONS['title'][1]
 
 
-class ReviewTitleAbstractModel(models.Model):
+class ContentAbstractModel(models.Model):
     """Абстрактная модель для отзывов и комментариев."""
 
     author = models.ForeignKey(
@@ -181,18 +184,26 @@ class ReviewTitleAbstractModel(models.Model):
         abstract = True
         ordering = ('-pub_date',)
 
+    def __str__(self):
+        return CONTENT.format(
+            title=self.title,
+            text=self.text,
+            author=self.author,
+            pub_date=self.pub_date,
+        )
 
-class Review(ReviewTitleAbstractModel):
+
+class Review(ContentAbstractModel):
     """Модель отзывов."""
 
     score = models.SmallIntegerField(
         validators=(
-            MinValueValidator(SCORE_VALUES['min_value']),
-            MaxValueValidator(SCORE_VALUES['max_value']),
+            MinValueValidator(MIN_SCORE),
+            MaxValueValidator(MAX_SCORE),
         ),
     )
 
-    class Meta(ReviewTitleAbstractModel.Meta):
+    class Meta(ContentAbstractModel.Meta):
         verbose_name = MODELS_LOCALISATIONS['review'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['review'][1]
         constraints = (
@@ -204,26 +215,25 @@ class Review(ReviewTitleAbstractModel):
 
     def __str__(self):
         return REVIEW.format(
-            title=self.title,
-            text=self.text,
-            author=self.author,
+            content_str=super().__str__(),
             score=self.score,
-            pub_date=self.pub_date,
         )
 
 
-class Comment(ReviewTitleAbstractModel):
+class Comment(ContentAbstractModel):
     """Модель комментариев."""
 
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE, related_name='comments')
 
-    class Meta(ReviewTitleAbstractModel.Meta):
+    class Meta(ContentAbstractModel.Meta):
         verbose_name = MODELS_LOCALISATIONS['comment'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['comment'][1]
 
     def __str__(self):
-        return self.text[:30]
+        return COMMENT.format(
+            content_str=super().__str__(),
+            comment=self.text[:30])
 
 
 class GenreTitle(models.Model):
@@ -231,4 +241,7 @@ class GenreTitle(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'{self.genre} {self.title}'
+        return GENRETITLE.format(
+            genre=self.genre,
+            title=self.title
+        )

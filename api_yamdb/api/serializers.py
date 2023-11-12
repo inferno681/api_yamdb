@@ -38,32 +38,12 @@ class CategorySerializer(serializers.ModelSerializer):
 class TitleOutputSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
         model = Title
-
-    def get_rating(self, obj):
-        # print('--------------------------------')
-        # print('TITLE!!!')
-        # title = get_object_or_404(
-        #     Title,
-        #     pk=obj.id,
-        # ).reviews.all().aggregate(Avg('score')).get('score__avg')
-        # print(title)
-        # print('--------------------------------')
-        # print('--------------------------------')
-        # print('TITLE!!!v2')
-        # title_2 = Title.objects.filter(pk=obj.id).annotate(rating=Avg(
-        #     'reviews__score')).values('rating')
-        # print(title_2)
-        # print('--------------------------------')
-        return get_object_or_404(
-            Title,
-            pk=obj.id,
-        ).reviews.all().aggregate(Avg('score')).get('score__avg')
 
 
 class TitleInputSerializer(TitleOutputSerializer):
