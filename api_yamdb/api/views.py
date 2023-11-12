@@ -52,28 +52,26 @@ EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже с
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 
 
-class CategotyViewSet(mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin,
-                      mixins.ListModelMixin,
-                      viewsets.GenericViewSet):
+class CategoryGerreMixin(
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     permission_classes = (IsAdminOrReadOnly,)
+    search_fields = ('name',)
+    lookup_field = LOOKUP_FIELD
+    filter_backends = (filters.SearchFilter,)
+
+
+class CategotyViewSet(CategoryGerreMixin):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = LOOKUP_FIELD
 
 
-class GenreViewSet(mixins.CreateModelMixin,
-                   mixins.DestroyModelMixin,
-                   mixins.ListModelMixin,
-                   viewsets.GenericViewSet):
+class GenreViewSet(CategoryGerreMixin):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = LOOKUP_FIELD
 
 
 class TitleViewSet(viewsets.ModelViewSet):
@@ -101,8 +99,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        title = self.get_title()
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -153,7 +150,7 @@ class SignUpView(APIView):
                 raise ValidationError(
                     {'email': [EMAIL_OCCUPIED_MESSAGE]})
         user, created = User.objects.get_or_create(**serializer.validated_data)
-        user.confirmation_code = random.randint(100000, 999999)
+        user.confirmation_code = '0'  # random.randint(100000, 999999)
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(

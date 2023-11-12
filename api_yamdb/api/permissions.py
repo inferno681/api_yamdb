@@ -15,7 +15,7 @@ class IsAdminOrReadOnly(IsAdminOnly):
 
 
 class IsAuthorOrStuffOrReadOnly(permissions.BasePermission):
-    message = 'Изменение чужого контента запрещено!'
+    message = 'Изменение контента других авторов запрещено!'
 
     def has_object_permission(self, request, view, obj):
         return (request.method in permissions.SAFE_METHODS

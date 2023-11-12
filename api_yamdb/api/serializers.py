@@ -36,8 +36,6 @@ class CategorySerializer(serializers.ModelSerializer):
 class TitleOutputSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
-    description = serializers.CharField(required=False)
-    year = serializers.IntegerField(validators=(validate_year,))
     rating = serializers.SerializerMethodField()
 
     class Meta:
@@ -62,10 +60,10 @@ class TitleInputSerializer(TitleOutputSerializer):
         queryset=Genre.objects.all(),
         slug_field='slug',
     )
+    year = serializers.IntegerField(validators=(validate_year,))
 
     def to_representation(self, title):
-        serializer = TitleOutputSerializer(title)
-        return serializer.data
+        return TitleOutputSerializer(title).data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -77,15 +75,18 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        title = get_object_or_404(
+        if request.method != 'PATCH' and get_object_or_404(
             Title,
             pk=request.parser_context.get('kwargs').get('title_id'),
-        )
-        if title.reviews.filter(
-                author=request.user).exists() and request.method != 'PATCH':
+        ).reviews.filter(author=request.user).exists():
             raise serializers.ValidationError(
                 SECOND_REVIEW_PROHIBITION_MESSAGE)
         return data
+
+    def validate_score(self, score):
+        if 0 > score >= 10:
+            raise serializers.ValidationError('Оценка по 10-бальной шкале!')
+        return score
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -110,7 +111,7 @@ class SignUpSerializer(serializers.Serializer):
 class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField(
         max_length=FIELDS_LENGTH_LIMITS['user']['username'],
-        required=True)
+        required=True, validators=(validate_username,))
     confirmation_code = serializers.CharField(
         max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
         required=True)
