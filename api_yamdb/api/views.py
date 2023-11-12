@@ -32,7 +32,6 @@ from .serializers import (
     GetTokenSerializer,
     ReviewSerializer,
     SignUpSerializer,
-    TitleSerializer,
     TitleSerializer1,
     TitleSerializer2,
     UserSerializer,
@@ -176,9 +175,11 @@ class GetTokenView(APIView):
     def post(self, request):
         serializer = GetTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = get_object_or_404(User, username=request.data['username'])
+        user = get_object_or_404(User, username=serializer.data['username'])
         if request.data.get('confirmation_code') == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
+            user.confirmation_code = None
+            user.save()
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         return Response(
             INVALID_CONFIRMATION_CODE_MESSAGE,

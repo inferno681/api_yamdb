@@ -88,6 +88,7 @@ class User(AbstractUser):
     confirmation_code = models.CharField(
         max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
         blank=True,
+        null=True
     )
 
     @property
