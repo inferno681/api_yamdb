@@ -31,23 +31,11 @@ SCORE_VALUES = {
     'min_value': 1,
     'max_value': 10,
 }
-FIELDS_LENGTH_LIMITS = {
-    'user': {
-        'username': 150,
-        'email': 254,
-        'first_name': 150,
-        'last_name': 150,
-        'role': max(len(role) for _, role in ROLE_CHOICE),
-        'confirmation_code': 6,
-    },
-    'genre_category': {
-        'name': 256,
-        'slug': 50,
-    },
-    'title': {
-        'name': 256,
-    }
-}
+LENGTH_LIMITS_USER_FIELDS = 150
+LENGTH_LIMITS_USER_EMAIL = 254
+LENGTH_LIMITS_USER_ROLE = max(len(role) for _, role in ROLE_CHOICE)
+LENGTH_LIMITS_OBJECT_NAME = 256
+LENGTH_LIMITS_OBJECT_SLUG = 50
 
 MODELS_LOCALISATIONS = {
     'user': ('Пользователь', 'Пользователи'),
@@ -64,32 +52,32 @@ class User(AbstractUser):
 
     username = models.CharField(
         db_index=True,
-        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         unique=True,
     )
     email = models.EmailField(
         db_index=True,
-        max_length=FIELDS_LENGTH_LIMITS['user']['email'],
+        max_length=LENGTH_LIMITS_USER_EMAIL,
         unique=True,
     )
     first_name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['first_name'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         blank=True,
     )
     last_name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['last_name'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         blank=True,
     )
     bio = models.TextField(blank=True)
     role = models.CharField(
-        max_length=max(len(role) for _, role in ROLE_CHOICE),
+        max_length=LENGTH_LIMITS_USER_ROLE,
         default=USER,
         choices=ROLE_CHOICE,
     )
     confirmation_code = models.CharField(
         max_length=settings.CONFIRMATION_CODE_LENGTH,
         blank=True,
-        null=True
+        null=True,
     )
 
     @property
@@ -108,7 +96,7 @@ class User(AbstractUser):
         return self.username
 
     class Meta:
-        ordering = ('-date_joined',)
+        ordering = ('username',)
         verbose_name = MODELS_LOCALISATIONS['user'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['user'][1]
 
@@ -117,9 +105,9 @@ class GenreCategoryAbstractModel(models.Model):
     """Абстрактная модель для жанров и категорий."""
 
     name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['genre_category']['name'])
+        max_length=LENGTH_LIMITS_OBJECT_NAME)
     slug = models.SlugField(
-        max_length=FIELDS_LENGTH_LIMITS['genre_category']['slug'],
+        max_length=LENGTH_LIMITS_OBJECT_SLUG,
         unique=True,
     )
 
@@ -128,7 +116,7 @@ class GenreCategoryAbstractModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('slug',)
+        ordering = ('name',)
 
 
 class Genre(GenreCategoryAbstractModel):
@@ -151,7 +139,7 @@ class Title(models.Model):
     """Модель произведений."""
 
     name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['title']['name'])
+        max_length=LENGTH_LIMITS_OBJECT_NAME)
     year = models.IntegerField(validators=(validate_year,))
     description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, through='GenreTitle')
@@ -209,7 +197,7 @@ class Review(ReviewTitleAbstractModel):
         verbose_name_plural = MODELS_LOCALISATIONS['review'][1]
         constraints = (
             models.UniqueConstraint(
-                fields=('title', 'author', ),
+                fields=('title', 'author',),
                 name='unique reveview'
             ),
         )
