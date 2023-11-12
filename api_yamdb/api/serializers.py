@@ -38,12 +38,32 @@ class CategorySerializer(serializers.ModelSerializer):
 class TitleOutputSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.SerializerMethodField()
 
     class Meta:
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
         model = Title
+
+    def get_rating(self, obj):
+        # print('--------------------------------')
+        # print('TITLE!!!')
+        # title = get_object_or_404(
+        #     Title,
+        #     pk=obj.id,
+        # ).reviews.all().aggregate(Avg('score')).get('score__avg')
+        # print(title)
+        # print('--------------------------------')
+        # print('--------------------------------')
+        # print('TITLE!!!v2')
+        # title_2 = Title.objects.filter(pk=obj.id).annotate(rating=Avg(
+        #     'reviews__score')).values('rating')
+        # print(title_2)
+        # print('--------------------------------')
+        return get_object_or_404(
+            Title,
+            pk=obj.id,
+        ).reviews.all().aggregate(Avg('score')).get('score__avg')
 
 
 class TitleInputSerializer(TitleOutputSerializer):
@@ -51,11 +71,13 @@ class TitleInputSerializer(TitleOutputSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
+
     genre = SlugRelatedField(
         many=True,
         queryset=Genre.objects.all(),
         slug_field='slug',
     )
+    description = serializers.CharField(required=False)
     year = serializers.IntegerField(validators=(validate_year,))
 
     def to_representation(self, title):
@@ -72,8 +94,8 @@ class ReviewSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
         if request.method != 'PATCH' and get_object_or_404(
-            Title,
-            pk=request.parser_context.get('kwargs').get('title_id'),
+                Title,
+                pk=request.parser_context.get('kwargs').get('title_id'),
         ).reviews.filter(author=request.user).exists():
             raise serializers.ValidationError(
                 SECOND_REVIEW_PROHIBITION_MESSAGE)
@@ -114,7 +136,6 @@ class GetTokenSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     class Meta:
         fields = (
             'username',
