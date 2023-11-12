@@ -13,7 +13,7 @@ from reviews.models import (
     FIELDS_LENGTH_LIMITS,
 )
 
-from .validators import validate_username, validate_year
+from reviews.validators import validate_username, validate_year
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'

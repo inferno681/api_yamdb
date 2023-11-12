@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from api.validators import validate_year
+from .validators import validate_year
 
 ADMIN = 'admin'
 MODERATOR = 'moderator'
@@ -81,7 +81,7 @@ class User(AbstractUser):
     )
     bio = models.TextField(blank=True)
     role = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['role'],
+        max_length=max(len(role) for _, role in ROLE_CHOICE),
         default=USER,
         choices=ROLE_CHOICE,
     )
@@ -93,7 +93,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return self.role == ADMIN or self.is_staff or self.is_superuser
+        return self.role == ADMIN or self.is_staff
 
     @property
     def is_moderator(self):

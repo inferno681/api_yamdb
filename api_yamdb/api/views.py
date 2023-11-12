@@ -22,6 +22,7 @@ from .permissions import (
     IsAuthorOrStuffOrReadOnly,
 )
 from reviews.models import Category, Genre, Review, Title, User
+from django.conf import settings
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -34,7 +35,7 @@ from .serializers import (
     UserSerializer,
 )
 
-SENDER = 'admin@ya_mdb.ru'
+
 SUBJECT = 'Код подтверждения'
 MESSAGE = ('Привет {username}! \n'
            'Код для получения токена: {confirmation_code}')
@@ -52,7 +53,7 @@ EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже с
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 
 
-class CategoryGerreMixin(
+class CategoryGenreMixin(
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
     mixins.ListModelMixin,
@@ -64,12 +65,12 @@ class CategoryGerreMixin(
     filter_backends = (filters.SearchFilter,)
 
 
-class CategotyViewSet(CategoryGerreMixin):
+class CategotyViewSet(CategoryGenreMixin):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(CategoryGerreMixin):
+class GenreViewSet(CategoryGenreMixin):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
@@ -157,7 +158,7 @@ class SignUpView(APIView):
                       username=user.username,
                       confirmation_code=user.confirmation_code
                   ),
-                  from_email=SENDER,
+                  from_email=settings.ADMIN_EMAIL,
                   recipient_list=(user.email,)
                   )
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -196,8 +197,7 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes=(IsAuthenticated,))
     def get_current_user(self, request):
         if request.method == 'GET':
-            serializer = UserSerializer(request.user)
-            return Response(serializer.data)
+            return Response(UserSerializer(request.user).data)
         serializer = UserSerializer(
             request.user,
             data=request.data,
