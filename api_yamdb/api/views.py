@@ -1,12 +1,8 @@
 import random
-import string
-from statistics import mean
 
 from django.core.mail import send_mail
-from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -16,8 +12,8 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly,
 )
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
 
 from .filters import TitleFilter
 from .permissions import (
@@ -33,7 +29,8 @@ from .serializers import (
     GetTokenSerializer,
     ReviewSerializer,
     SignUpSerializer,
-    TitleSerializer,
+    TitleOutputSerializer,
+    TitleInputSerializer,
     UserSerializer,
 )
 
@@ -50,6 +47,9 @@ USERNAME_DOESNOT_EXIST_MESSAGE = {'username': 'Пользователь не н�
 INVALID_CONFIRMATION_CODE_MESSAGE = {
     'confirmation_code': 'Неверный код подтверждения!'}
 LOOKUP_FIELD = 'slug'
+
+EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
+USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 
 
 class CategotyViewSet(mixins.CreateModelMixin,
@@ -78,11 +78,15 @@ class GenreViewSet(mixins.CreateModelMixin,
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
-    serializer_class = TitleSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return TitleOutputSerializer
+        return TitleInputSerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -99,9 +103,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
-        title.rating = self.get_queryset().aggregate(Avg('score')).get(
-            'score__avg')
-        title.save()
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -137,8 +138,22 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        if not User.objects.filter(**serializer.validated_data).exists():
+            user1 = User.objects.filter(username=request.data['username'])
+            user2 = User.objects.filter(email=request.data['email'])
+            if user1 and user2:
+                raise ValidationError({
+                    'username': [USERNAME_OCCUPIED_MESSAGE],
+                    'email': [EMAIL_OCCUPIED_MESSAGE],
+                })
+            if user1:
+                raise ValidationError(
+                    {'username': [USERNAME_OCCUPIED_MESSAGE]})
+            if user2:
+                raise ValidationError(
+                    {'email': [EMAIL_OCCUPIED_MESSAGE]})
         user, created = User.objects.get_or_create(**serializer.validated_data)
-        user.confirmation_code = '0'
+        user.confirmation_code = random.randint(100000, 999999)
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
@@ -157,9 +172,11 @@ class GetTokenView(APIView):
     def post(self, request):
         serializer = GetTokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = get_object_or_404(User, username=request.data['username'])
+        user = get_object_or_404(User, username=serializer.data['username'])
         if request.data.get('confirmation_code') == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
+            user.confirmation_code = None
+            user.save()
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
         return Response(
             INVALID_CONFIRMATION_CODE_MESSAGE,

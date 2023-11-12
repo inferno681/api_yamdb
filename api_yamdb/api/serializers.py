@@ -1,26 +1,24 @@
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
-from rest_framework.validators import UniqueValidator
-from django.core.exceptions import ValidationError
 
 from reviews.models import (
     Category,
     Comment,
     Genre,
-    GenreTitle,
     Review,
     Title,
     User,
     FIELDS_LENGTH_LIMITS,
 )
+
 from .validators import validate_username, validate_year
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 SECOND_REVIEW_PROHIBITION_MESSAGE = {
-    'review': ['You are already review this title.']}
+    'review': ['Вы уже оставляли ревью для этого произведения']}
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -35,7 +33,26 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleOutputSerializer(serializers.ModelSerializer):
+    category = CategorySerializer()
+    genre = GenreSerializer(many=True)
+    description = serializers.CharField(required=False)
+    year = serializers.IntegerField(validators=(validate_year,))
+    rating = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
+        model = Title
+
+    def get_rating(self, obj):
+        return get_object_or_404(
+            Title,
+            pk=obj.id,
+        ).reviews.all().aggregate(Avg('score')).get('score__avg')
+
+
+class TitleInputSerializer(TitleOutputSerializer):
     category = SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'
@@ -45,36 +62,10 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         slug_field='slug',
     )
-    description = serializers.CharField(required=False)
-    year = serializers.IntegerField(validators=(validate_year,))
 
-    class Meta:
-        fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
-        model = Title
-        read_only_fields = ('rating',)
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        title = Title.objects.get(id=data['id'])
-        data['category'] = {
-            'name': title.category.name,
-            'slug': title.category.slug
-        }
-        data['genre'] = [
-            {
-                'name': genre.name,
-                'slug': genre.slug,
-            } for genre in title.genre.all()
-        ]
-        return data
-
-    def create(self, validated_data):
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(**validated_data)
-        for genre in genres:
-            GenreTitle.objects.create(genre=genre, title=title)
-        return title
+    def to_representation(self, title):
+        serializer = TitleOutputSerializer(title)
+        return serializer.data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -83,7 +74,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'text', 'author', 'score', 'pub_date')
         model = Review
-        read_only_fields = ('title',)
 
     def validate(self, data):
         request = self.context.get('request')
@@ -105,10 +95,9 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ('id', 'text', 'author', 'pub_date')
         model = Comment
-        read_only_fields = ('title', 'review')
 
 
-class SignUpSerializer(serializers.ModelSerializer):
+class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(
         max_length=FIELDS_LENGTH_LIMITS['user']['email'], required=True)
     username = serializers.CharField(
@@ -117,49 +106,17 @@ class SignUpSerializer(serializers.ModelSerializer):
         validators=(validate_username,),
     )
 
-    class Meta:
-        fields = ('email', 'username')
-        model = User
 
-    def validate(self, data):
-        if not User.objects.filter(
-                username=data['username'], email=data['email']).exists():
-            user1 = User.objects.filter(username=data['username'])
-            user2 = User.objects.filter(email=data['email'])
-            if user1 and user2:
-                raise serializers.ValidationError({
-                    'username': USERNAME_OCCUPIED_MESSAGE,
-                    'email': EMAIL_OCCUPIED_MESSAGE,
-                })
-            if user1:
-                raise serializers.ValidationError(
-                    {'username': USERNAME_OCCUPIED_MESSAGE})
-            if user2:
-                raise serializers.ValidationError(
-                    {'email': EMAIL_OCCUPIED_MESSAGE})
-        return data
-
-
-class GetTokenSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(max_length=150, required=True)
-    confirmation_code = serializers.CharField(max_length=255, required=True)
-
-    class Meta:
-        fields = ('username', 'confirmation_code')
-        model = User
+class GetTokenSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        required=True)
+    confirmation_code = serializers.CharField(
+        max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
+        required=True)
 
 
 class UserSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(max_length=254, required=True, validators=(
-        UniqueValidator(message=EMAIL_OCCUPIED_MESSAGE,
-                        queryset=User.objects.all()),))
-    username = serializers.CharField(
-        max_length=150,
-        required=True,
-        validators=(validate_username, UniqueValidator(
-            message=USERNAME_OCCUPIED_MESSAGE,
-            queryset=User.objects.all()),)
-    )
 
     class Meta:
         fields = (
@@ -171,3 +128,7 @@ class UserSerializer(serializers.ModelSerializer):
             'role'
         )
         model = User
+
+    def validate_username(self, username):
+        validate_username(username)
+        return username
