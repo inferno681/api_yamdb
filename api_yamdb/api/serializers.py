@@ -1,4 +1,5 @@
 from django.db.models import Avg
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
@@ -10,7 +11,8 @@ from reviews.models import (
     Review,
     Title,
     User,
-    FIELDS_LENGTH_LIMITS,
+    LENGTH_LIMITS_USER_FIELDS,
+    LENGTH_LIMITS_USER_EMAIL,
 )
 
 from reviews.validators import validate_username, validate_year
@@ -36,18 +38,12 @@ class CategorySerializer(serializers.ModelSerializer):
 class TitleOutputSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(read_only=True)
 
     class Meta:
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
         model = Title
-
-    def get_rating(self, obj):
-        return get_object_or_404(
-            Title,
-            pk=obj.id,
-        ).reviews.all().aggregate(Avg('score')).get('score__avg')
 
 
 class TitleInputSerializer(TitleOutputSerializer):
@@ -100,9 +96,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['email'], required=True)
+        max_length=LENGTH_LIMITS_USER_EMAIL, required=True)
     username = serializers.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         required=True,
         validators=(validate_username,),
     )
@@ -110,10 +106,10 @@ class SignUpSerializer(serializers.Serializer):
 
 class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         required=True, validators=(validate_username,))
     confirmation_code = serializers.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
+        max_length=settings.CONFIRMATION_CODE_LENGTH,
         required=True)
 
 

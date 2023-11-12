@@ -1,6 +1,7 @@
 import random
 
 from django.core.mail import send_mail
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
@@ -153,7 +154,8 @@ class SignUpView(APIView):
         user, created = User.objects.get_or_create(**serializer.validated_data)
         user.confirmation_code = ''.join(random.choices(
             settings.CONFIRMATION_CODE_SYMBOLS,
-            k=settings.CONFIRMATION_CODE_LENGTH))
+            k=settings.CONFIRMATION_CODE_LENGTH),
+        )
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
