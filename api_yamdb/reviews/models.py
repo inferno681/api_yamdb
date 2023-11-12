@@ -15,7 +15,6 @@ ROLE_CHOICE = (
 TITLE = (
     'Название: {name:.15}. '
     'Год: {year:.15}. '
-    'Рейтинг: {rating:.15}. '
     'Описание: {description:.15}. '
     'Жанр: {genre:.15}. '
     'Категория: {category:.15}. '
@@ -152,7 +151,6 @@ class Title(models.Model):
     name = models.CharField(
         max_length=FIELDS_LENGTH_LIMITS['title']['name'])
     year = models.IntegerField(validators=(validate_year,))
-    rating = models.FloatField(null=True)  # удалить позже
     description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, through='GenreTitle')
     category = models.ForeignKey(
@@ -167,14 +165,13 @@ class Title(models.Model):
         return TITLE.format(
             name=self.name,
             year=self.year,
-            rating=self.rating,
             description=self.description,
             genre=self.genre,
             category=self.category
         )
 
     class Meta:
-        ordering = ('-year', '-rating', 'name')
+        ordering = ('-year', 'name')
         verbose_name = MODELS_LOCALISATIONS['title'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['title'][1]
 
@@ -208,11 +205,10 @@ class Review(ReviewTitleAbstractModel):
     class Meta(ReviewTitleAbstractModel.Meta):
         verbose_name = MODELS_LOCALISATIONS['review'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['review'][1]
-        unique_together = ('title_id', 'author')  # удалить как разкоментим код
         constraints = (
             models.UniqueConstraint(
                 fields=('title', 'author', ),
-                name='unique review'
+                name='unique reveview'
             ),
         )
 

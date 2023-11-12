@@ -3,7 +3,6 @@ import string
 from statistics import mean
 
 from django.core.mail import send_mail
-from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -34,6 +33,8 @@ from .serializers import (
     ReviewSerializer,
     SignUpSerializer,
     TitleSerializer,
+    TitleSerializer1,
+    TitleSerializer2,
     UserSerializer,
 )
 
@@ -81,11 +82,15 @@ class GenreViewSet(mixins.CreateModelMixin,
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
-    serializer_class = TitleSerializer
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete')
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return TitleSerializer1
+        return TitleSerializer2
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -102,9 +107,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         title = self.get_title()
         serializer.save(author=self.request.user, title=title)
-        title.rating = self.get_queryset().aggregate(Avg('score')).get(
-            'score__avg')
-        title.save()
 
 
 class CommentViewSet(viewsets.ModelViewSet):

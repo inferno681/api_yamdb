@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.validators import UniqueValidator
+from django.db.models import Avg
 from django.core.exceptions import ValidationError
 
 from reviews.models import (
@@ -35,7 +36,26 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-class TitleSerializer(serializers.ModelSerializer):
+class TitleSerializer1(serializers.ModelSerializer):
+    category = CategorySerializer()
+    genre = GenreSerializer(many=True)
+    description = serializers.CharField(required=False)
+    year = serializers.IntegerField(validators=(validate_year,))
+    rating = serializers.SerializerMethodField()
+
+    class Meta:
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
+        model = Title
+
+    def get_rating(self, obj):
+        return get_object_or_404(
+            Title,
+            pk=obj.id,
+        ).reviews.all().aggregate(Avg('score')).get('score__avg')
+
+
+class TitleSerializer2(TitleSerializer1):
     category = SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'
@@ -45,14 +65,13 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         slug_field='slug',
     )
-    description = serializers.CharField(required=False)
-    year = serializers.IntegerField(validators=(validate_year,))
 
-    class Meta:
-        fields = (
-            'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
-        model = Title
-        read_only_fields = ('rating',)
+    def create(self, validated_data):
+        genres = validated_data.pop('genre')
+        title = Title.objects.create(**validated_data)
+        for genre in genres:
+            GenreTitle.objects.create(genre=genre, title=title)
+        return title
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -68,13 +87,6 @@ class TitleSerializer(serializers.ModelSerializer):
             } for genre in title.genre.all()
         ]
         return data
-
-    def create(self, validated_data):
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(**validated_data)
-        for genre in genres:
-            GenreTitle.objects.create(genre=genre, title=title)
-        return title
 
 
 class ReviewSerializer(serializers.ModelSerializer):
