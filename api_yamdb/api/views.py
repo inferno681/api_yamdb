@@ -1,11 +1,8 @@
 import random
-import string
-from statistics import mean
 
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -15,8 +12,8 @@ from rest_framework.permissions import (
     IsAuthenticatedOrReadOnly,
 )
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
 
 from .filters import TitleFilter
 from .permissions import (
@@ -32,8 +29,8 @@ from .serializers import (
     GetTokenSerializer,
     ReviewSerializer,
     SignUpSerializer,
-    TitleSerializer1,
-    TitleSerializer2,
+    TitleOutputSerializer,
+    TitleInputSerializer,
     UserSerializer,
 )
 
@@ -88,8 +85,8 @@ class TitleViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.request.method == 'GET':
-            return TitleSerializer1
-        return TitleSerializer2
+            return TitleOutputSerializer
+        return TitleInputSerializer
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

@@ -1,27 +1,24 @@
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
-
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
-from rest_framework.validators import UniqueValidator
-from django.db.models import Avg
-from django.core.exceptions import ValidationError
 
 from reviews.models import (
     Category,
     Comment,
     Genre,
-    GenreTitle,
     Review,
     Title,
     User,
     FIELDS_LENGTH_LIMITS,
 )
+
 from .validators import validate_username, validate_year
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 SECOND_REVIEW_PROHIBITION_MESSAGE = {
-    'review': ['You are already review this title.']}
+    'review': ['Вы уже оставляли ревью для этого произведения']}
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -36,7 +33,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('name', 'slug')
 
 
-class TitleSerializer1(serializers.ModelSerializer):
+class TitleOutputSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
     description = serializers.CharField(required=False)
@@ -55,7 +52,7 @@ class TitleSerializer1(serializers.ModelSerializer):
         ).reviews.all().aggregate(Avg('score')).get('score__avg')
 
 
-class TitleSerializer2(TitleSerializer1):
+class TitleInputSerializer(TitleOutputSerializer):
     category = SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'
@@ -66,27 +63,9 @@ class TitleSerializer2(TitleSerializer1):
         slug_field='slug',
     )
 
-    def create(self, validated_data):
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(**validated_data)
-        for genre in genres:
-            GenreTitle.objects.create(genre=genre, title=title)
-        return title
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        title = Title.objects.get(id=data['id'])
-        data['category'] = {
-            'name': title.category.name,
-            'slug': title.category.slug
-        }
-        data['genre'] = [
-            {
-                'name': genre.name,
-                'slug': genre.slug,
-            } for genre in title.genre.all()
-        ]
-        return data
+    def to_representation(self, title):
+        serializer = TitleOutputSerializer(title)
+        return serializer.data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
