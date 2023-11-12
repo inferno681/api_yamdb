@@ -1,5 +1,6 @@
 from datetime import timedelta
 from pathlib import Path
+import string
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -125,3 +126,6 @@ SIMPLE_JWT = {
 }
 
 ADMIN_EMAIL = 'admin@ya_mdb.ru'
+
+CONFIRMATION_CODE_LENGTH = 255
+CONFIRMATION_CODE_SYMBOLS = string.ascii_letters+string.digits

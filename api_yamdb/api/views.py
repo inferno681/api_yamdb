@@ -151,7 +151,9 @@ class SignUpView(APIView):
                 raise ValidationError(
                     {'email': [EMAIL_OCCUPIED_MESSAGE]})
         user, created = User.objects.get_or_create(**serializer.validated_data)
-        user.confirmation_code = '0'  # random.randint(100000, 999999)
+        user.confirmation_code = ''.join(random.choices(
+            settings.CONFIRMATION_CODE_SYMBOLS,
+            k=settings.CONFIRMATION_CODE_LENGTH))
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(

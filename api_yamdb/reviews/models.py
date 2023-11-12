@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -86,7 +87,7 @@ class User(AbstractUser):
         choices=ROLE_CHOICE,
     )
     confirmation_code = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
+        max_length=settings.CONFIRMATION_CODE_LENGTH,
         blank=True,
         null=True
     )
