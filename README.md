@@ -9,6 +9,7 @@ API проекта предназначен для взаимодействия 
 
 В этом проекте были использованы следующие технологии:
 
+- Python - язык программирования, на котором написан проект. [Python документация](https://docs.python.org/3.9/)
 - Django - веб-фреймворк для разработки веб-приложений. [Документация](https://docs.djangoproject.com/)
 - Django REST framework - библиотека для создания RESTful API на основе Django. [Документация](https://www.django-rest-framework.org/)
 
