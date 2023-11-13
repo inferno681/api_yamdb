@@ -21,6 +21,7 @@ def validate_username(username):
             INVALID_USERNAME_MESSAGE.format(
                 invalid_symbols="".join(set(invalid_symbols)))
         )
+    return username
 
 
 def validate_year(year):

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
@@ -12,6 +13,8 @@ from reviews.models import (
     User,
     LENGTH_LIMITS_USER_FIELDS,
     LENGTH_LIMITS_USER_EMAIL,
+    MAX_SCORE,
+    MIN_SCORE,
 )
 
 from reviews.validators import validate_username, validate_year
@@ -21,6 +24,11 @@ USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username у�
 SECOND_REVIEW_PROHIBITION_MESSAGE = {
     'review': ['Вы уже оставляли ревью для этого произведения']}
 INVALID_SCORE = 'Оценка по 10-бальной шкале!'
+
+
+class UsernameValidationMixin():
+    def validate_username(self, username):
+        return validate_username(username)
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -57,7 +65,6 @@ class TitleInputSerializer(TitleOutputSerializer):
         queryset=Genre.objects.all(),
         slug_field='slug',
     )
-    description = serializers.CharField(required=False)
     year = serializers.IntegerField(validators=(validate_year,))
 
     def to_representation(self, title):
@@ -66,6 +73,10 @@ class TitleInputSerializer(TitleOutputSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(read_only=True, slug_field='username')
+    score = serializers.IntegerField(validators=(
+        MinValueValidator(limit_value=MIN_SCORE, message=INVALID_SCORE),
+        MaxValueValidator(limit_value=MAX_SCORE, message=INVALID_SCORE),
+    ))
 
     class Meta:
         fields = ('id', 'text', 'author', 'score', 'pub_date')
@@ -74,17 +85,11 @@ class ReviewSerializer(serializers.ModelSerializer):
     def validate(self, data):
         request = self.context.get('request')
         if request.method != 'PATCH' and get_object_or_404(
-                Title,
-                pk=request.parser_context.get('kwargs').get('title_id'),
+                Title, pk=request.parser_context.get('kwargs').get('title_id'),
         ).reviews.filter(author=request.user).exists():
             raise serializers.ValidationError(
                 SECOND_REVIEW_PROHIBITION_MESSAGE)
         return data
-
-    def validate_score(self, score):
-        if 0 > score >= 10:
-            raise serializers.ValidationError(INVALID_SCORE)
-        return score
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -96,26 +101,25 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
 
 
-class SignUpSerializer(serializers.Serializer):
+class SignUpSerializer(UsernameValidationMixin, serializers.Serializer):
     email = serializers.EmailField(
         max_length=LENGTH_LIMITS_USER_EMAIL, required=True)
     username = serializers.CharField(
         max_length=LENGTH_LIMITS_USER_FIELDS,
         required=True,
-        validators=(validate_username,),
     )
 
 
-class GetTokenSerializer(serializers.Serializer):
+class GetTokenSerializer(UsernameValidationMixin, serializers.Serializer):
     username = serializers.CharField(
         max_length=LENGTH_LIMITS_USER_FIELDS,
-        required=True, validators=(validate_username,))
+        required=True)
     confirmation_code = serializers.CharField(
         max_length=settings.CONFIRMATION_CODE_LENGTH,
         required=True)
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(UsernameValidationMixin, serializers.ModelSerializer):
     class Meta:
         fields = (
             'username',
@@ -126,7 +130,3 @@ class UserSerializer(serializers.ModelSerializer):
             'role'
         )
         model = User
-
-    def validate_username(self, username):
-        validate_username(username)
-        return username
