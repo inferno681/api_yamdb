@@ -158,7 +158,9 @@ class SignUpView(APIView):
             if user.username != username:
                 raise ValidationError({'email': [EMAIL_OCCUPIED_MESSAGE]})
             raise ValidationError({'username': [USERNAME_OCCUPIED_MESSAGE]})
-        user.confirmation_code = '0'
+        user.confirmation_code = ''.join(random.choices(
+            settings.CONFIRMATION_CODE_SYMBOLS,
+            k=settings.CONFIRMATION_CODE_LENGTH),)
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
