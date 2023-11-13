@@ -1,5 +1,6 @@
 import random
 
+from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import Avg, Q
@@ -35,7 +36,6 @@ from .serializers import (
     TitleOutputSerializer,
     UserSerializer,
 )
-
 
 SUBJECT = 'Код подтверждения'
 MESSAGE = ('Привет {username}! \n'
@@ -139,26 +139,26 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        queryset = User.objects.filter(
-            Q(username=request.data['username']) | Q(
-                email=request.data['email'])
-        )
-        if len(queryset) == 2:
+        username = serializer.validated_data['username']
+        email = serializer.validated_data['email']
+        try:
+            user, created = User.objects.filter(
+                Q(username=username) | Q(email=email)).get_or_create(
+                defaults={
+                    'username': username,
+                    'email': email,
+                }
+            )
+        except MultipleObjectsReturned:
             raise ValidationError({
                 'username': [USERNAME_OCCUPIED_MESSAGE],
                 'email': [EMAIL_OCCUPIED_MESSAGE],
             })
-        user = queryset.first()
-        if user and user.username != request.data['username']:
-            raise ValidationError(
-                {'email': [EMAIL_OCCUPIED_MESSAGE]})
-        if user and user.email != request.data['email']:
-            raise ValidationError(
-                {'username': [USERNAME_OCCUPIED_MESSAGE]})
-        user, created = User.objects.get_or_create(**serializer.validated_data)
-        user.confirmation_code = ''.join(random.choices(
-            settings.CONFIRMATION_CODE_SYMBOLS,
-            k=settings.CONFIRMATION_CODE_LENGTH), )
+        if not created and (username != user.username or email != user.email):
+            if user.username != username:
+                raise ValidationError({'email': [EMAIL_OCCUPIED_MESSAGE]})
+            raise ValidationError({'username': [USERNAME_OCCUPIED_MESSAGE]})
+        user.confirmation_code = '0'
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
@@ -181,7 +181,7 @@ class GetTokenView(APIView):
         if request.data.get('confirmation_code') == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
-        user.confirmation_code = None
+        user.confirmation_code = ''
         user.save()
         return Response(
             INVALID_CONFIRMATION_CODE_MESSAGE,
