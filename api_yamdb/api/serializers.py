@@ -26,6 +26,11 @@ SECOND_REVIEW_PROHIBITION_MESSAGE = {
 INVALID_SCORE = 'Оценка по 10-бальной шкале!'
 
 
+class UsernameValidationMixin():
+    def validate_username(self, username):
+        return validate_username(username)
+
+
 class GenreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Genre
@@ -96,26 +101,25 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
 
 
-class SignUpSerializer(serializers.Serializer):
+class SignUpSerializer(UsernameValidationMixin, serializers.Serializer):
     email = serializers.EmailField(
         max_length=LENGTH_LIMITS_USER_EMAIL, required=True)
     username = serializers.CharField(
         max_length=LENGTH_LIMITS_USER_FIELDS,
         required=True,
-        validators=(validate_username,),
     )
 
 
-class GetTokenSerializer(serializers.Serializer):
+class GetTokenSerializer(UsernameValidationMixin, serializers.Serializer):
     username = serializers.CharField(
         max_length=LENGTH_LIMITS_USER_FIELDS,
-        required=True, validators=(validate_username,))
+        required=True)
     confirmation_code = serializers.CharField(
         max_length=settings.CONFIRMATION_CODE_LENGTH,
         required=True)
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(UsernameValidationMixin, serializers.ModelSerializer):
     class Meta:
         fields = (
             'username',
@@ -126,6 +130,3 @@ class UserSerializer(serializers.ModelSerializer):
             'role'
         )
         model = User
-
-    def validate_username(self, username):
-        return validate_username(username)
