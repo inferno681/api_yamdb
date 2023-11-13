@@ -1,7 +1,7 @@
 import random
 
 from django.core.mail import send_mail
-from django.db.models import Avg
+from django.db.models import Avg, Q
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
@@ -35,6 +35,7 @@ from .serializers import (
     TitleInputSerializer,
     UserSerializer,
 )
+import query_debugger
 
 
 SUBJECT = 'Код подтверждения'
@@ -138,20 +139,22 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        if not User.objects.filter(**serializer.validated_data).exists():
-            user1 = User.objects.filter(username=request.data['username'])
-            user2 = User.objects.filter(email=request.data['email'])
-            if user1 and user2:
-                raise ValidationError({
-                    'username': [USERNAME_OCCUPIED_MESSAGE],
-                    'email': [EMAIL_OCCUPIED_MESSAGE],
-                })
-            if user1:
-                raise ValidationError(
-                    {'username': [USERNAME_OCCUPIED_MESSAGE]})
-            if user2:
-                raise ValidationError(
-                    {'email': [EMAIL_OCCUPIED_MESSAGE]})
+        queryset = User.objects.filter(
+            Q(username=request.data['username']) | Q(
+                email=request.data['email'])
+        )
+        if len(queryset) == 2:
+            raise ValidationError({
+                'username': [USERNAME_OCCUPIED_MESSAGE],
+                'email': [EMAIL_OCCUPIED_MESSAGE],
+            })
+        user = queryset.first()
+        if user and user.username != request.data['username']:
+            raise ValidationError(
+                {'email': [EMAIL_OCCUPIED_MESSAGE]})
+        if user and user.email != request.data['email']:
+            raise ValidationError(
+                {'username': [USERNAME_OCCUPIED_MESSAGE]})
         user, created = User.objects.get_or_create(**serializer.validated_data)
         user.confirmation_code = '0'
         # .join(random.choices(
