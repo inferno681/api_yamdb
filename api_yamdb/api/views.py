@@ -77,7 +77,8 @@ class GenreViewSet(CategoryGenreMixin):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all().annotate(rating=Avg('reviews__score'))
+    queryset = Title.objects.all().annotate(
+        rating=Avg('reviews__score')).order_by('-year', 'name')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)

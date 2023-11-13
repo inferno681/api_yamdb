@@ -15,13 +15,12 @@ def validate_username(username):
     if username == 'me':
         raise ValidationError(INVALID_USERNAME_MESSAGE,
                               params={'username': username})
-    invalid_symbols = []
-    for char in set(username):
-        if not re.match(pattern=r'^[\w.@+-]+\Z', string=char):
-            invalid_symbols.append(char)
+    invalid_symbols = re.findall(r'[^\w@.+-]', username)
     if invalid_symbols:
-        raise ValidationError(INVALID_USERNAME_MESSAGE.format(
-            invalid_symbols=invalid_symbols), code='invalid username')
+        raise ValidationError(
+            INVALID_USERNAME_MESSAGE.format(
+                invalid_symbols="".join(set(invalid_symbols)))
+        )
 
 
 def validate_year(year):
