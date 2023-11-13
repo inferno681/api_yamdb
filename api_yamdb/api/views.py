@@ -55,7 +55,7 @@ EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже с
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 
 
-class CategoryGenreMixin(
+class CategoryGenreViewSet(
     mixins.CreateModelMixin,
     mixins.DestroyModelMixin,
     mixins.ListModelMixin,
@@ -67,12 +67,12 @@ class CategoryGenreMixin(
     filter_backends = (filters.SearchFilter,)
 
 
-class CategotyViewSet(CategoryGenreMixin):
+class CategotyViewSet(CategoryGenreViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
 
-class GenreViewSet(CategoryGenreMixin):
+class GenreViewSet(CategoryGenreViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
 
@@ -166,7 +166,7 @@ class SignUpView(APIView):
                       confirmation_code=user.confirmation_code
                   ),
                   from_email=settings.ADMIN_EMAIL,
-                  recipient_list=(user.email,)
+                  recipient_list=(user.email,),
                   )
         return Response(serializer.data, status=status.HTTP_200_OK)
 
