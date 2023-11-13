@@ -128,4 +128,4 @@ SIMPLE_JWT = {
 ADMIN_EMAIL = 'admin@ya_mdb.ru'
 
 CONFIRMATION_CODE_LENGTH = 255
-CONFIRMATION_CODE_SYMBOLS = string.ascii_letters+string.digits
+CONFIRMATION_CODE_SYMBOLS = string.ascii_letters + string.digits
