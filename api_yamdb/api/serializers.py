@@ -20,6 +20,7 @@ EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже с
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 SECOND_REVIEW_PROHIBITION_MESSAGE = {
     'review': ['Вы уже оставляли ревью для этого произведения']}
+INVALID_SCORE = 'Оценка по 10-бальной шкале!'
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -82,7 +83,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate_score(self, score):
         if 0 > score >= 10:
-            raise serializers.ValidationError('Оценка по 10-бальной шкале!')
+            raise serializers.ValidationError(INVALID_SCORE)
         return score
 
 

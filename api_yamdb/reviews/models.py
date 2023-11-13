@@ -36,7 +36,6 @@ MIN_SCORE = 1
 MAX_SCORE = 10
 LENGTH_LIMITS_USER_FIELDS = 150
 LENGTH_LIMITS_USER_EMAIL = 254
-LENGTH_LIMITS_USER_ROLE = max(len(role) for _, role in ROLE_CHOICE)
 LENGTH_LIMITS_OBJECT_NAME = 256
 LENGTH_LIMITS_OBJECT_SLUG = 50
 
@@ -73,7 +72,7 @@ class User(AbstractUser):
     )
     bio = models.TextField(blank=True)
     role = models.CharField(
-        max_length=LENGTH_LIMITS_USER_ROLE,
+        max_length=max(len(role) for _, role in ROLE_CHOICE),
         default=USER,
         choices=ROLE_CHOICE,
     )
