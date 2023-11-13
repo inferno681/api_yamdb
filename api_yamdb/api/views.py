@@ -1,5 +1,6 @@
 import random
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.db.models import Avg, Q
 from django.shortcuts import get_object_or_404
@@ -23,7 +24,6 @@ from .permissions import (
     IsAuthorOrStuffOrReadOnly,
 )
 from reviews.models import Category, Genre, Review, Title, User
-from django.conf import settings
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -31,11 +31,10 @@ from .serializers import (
     GetTokenSerializer,
     ReviewSerializer,
     SignUpSerializer,
-    TitleOutputSerializer,
     TitleInputSerializer,
+    TitleOutputSerializer,
     UserSerializer,
 )
-import query_debugger
 
 
 SUBJECT = 'Код подтверждения'
@@ -48,7 +47,8 @@ SECOND_REVIEW_PROHIBITION_MESSAGE = {
 USERNAME_OR_EMAIL_OCCUPIED_MESSAGE = 'Такой логин или email уже существуют'
 USERNAME_DOESNOT_EXIST_MESSAGE = {'username': 'Пользователь не найден!'}
 INVALID_CONFIRMATION_CODE_MESSAGE = {
-    'confirmation_code': 'Неверный код подтверждения!'}
+    'confirmation_code': ('Неверный код подтверждения! '
+                          'Запросите новый код через форму регистрации')}
 LOOKUP_FIELD = 'slug'
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
@@ -156,11 +156,9 @@ class SignUpView(APIView):
             raise ValidationError(
                 {'username': [USERNAME_OCCUPIED_MESSAGE]})
         user, created = User.objects.get_or_create(**serializer.validated_data)
-        user.confirmation_code = '0'
-        # .join(random.choices(
-        #     settings.CONFIRMATION_CODE_SYMBOLS,
-        #     k=settings.CONFIRMATION_CODE_LENGTH),
-        # )
+        user.confirmation_code = ''.join(random.choices(
+            settings.CONFIRMATION_CODE_SYMBOLS,
+            k=settings.CONFIRMATION_CODE_LENGTH), )
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
@@ -182,9 +180,9 @@ class GetTokenView(APIView):
         user = get_object_or_404(User, username=serializer.data['username'])
         if request.data.get('confirmation_code') == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
-            user.confirmation_code = None
-            user.save()
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
+        user.confirmation_code = None
+        user.save()
         return Response(
             INVALID_CONFIRMATION_CODE_MESSAGE,
             status=status.HTTP_400_BAD_REQUEST,
