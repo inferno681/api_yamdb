@@ -1,4 +1,4 @@
-from django.db.models import Avg
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
@@ -10,10 +10,11 @@ from reviews.models import (
     Review,
     Title,
     User,
-    FIELDS_LENGTH_LIMITS,
+    LENGTH_LIMITS_USER_FIELDS,
+    LENGTH_LIMITS_USER_EMAIL,
 )
 
-from .validators import validate_username, validate_year
+from reviews.validators import validate_username, validate_year
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
@@ -36,20 +37,12 @@ class CategorySerializer(serializers.ModelSerializer):
 class TitleOutputSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
     genre = GenreSerializer(many=True)
-    description = serializers.CharField(required=False)
-    year = serializers.IntegerField(validators=(validate_year,))
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(read_only=True, default=None)
 
     class Meta:
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category')
         model = Title
-
-    def get_rating(self, obj):
-        return get_object_or_404(
-            Title,
-            pk=obj.id,
-        ).reviews.all().aggregate(Avg('score')).get('score__avg')
 
 
 class TitleInputSerializer(TitleOutputSerializer):
@@ -57,15 +50,17 @@ class TitleInputSerializer(TitleOutputSerializer):
         queryset=Category.objects.all(),
         slug_field='slug'
     )
+
     genre = SlugRelatedField(
         many=True,
         queryset=Genre.objects.all(),
         slug_field='slug',
     )
+    description = serializers.CharField(required=False)
+    year = serializers.IntegerField(validators=(validate_year,))
 
     def to_representation(self, title):
-        serializer = TitleOutputSerializer(title)
-        return serializer.data
+        return TitleOutputSerializer(title).data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -77,15 +72,18 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         request = self.context.get('request')
-        title = get_object_or_404(
-            Title,
-            pk=request.parser_context.get('kwargs').get('title_id'),
-        )
-        if title.reviews.filter(
-                author=request.user).exists() and request.method != 'PATCH':
+        if request.method != 'PATCH' and get_object_or_404(
+                Title,
+                pk=request.parser_context.get('kwargs').get('title_id'),
+        ).reviews.filter(author=request.user).exists():
             raise serializers.ValidationError(
                 SECOND_REVIEW_PROHIBITION_MESSAGE)
         return data
+
+    def validate_score(self, score):
+        if 0 > score >= 10:
+            raise serializers.ValidationError('Оценка по 10-бальной шкале!')
+        return score
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -99,9 +97,9 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['email'], required=True)
+        max_length=LENGTH_LIMITS_USER_EMAIL, required=True)
     username = serializers.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         required=True,
         validators=(validate_username,),
     )
@@ -109,15 +107,14 @@ class SignUpSerializer(serializers.Serializer):
 
 class GetTokenSerializer(serializers.Serializer):
     username = serializers.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
-        required=True)
+        max_length=LENGTH_LIMITS_USER_FIELDS,
+        required=True, validators=(validate_username,))
     confirmation_code = serializers.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
+        max_length=settings.CONFIRMATION_CODE_LENGTH,
         required=True)
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     class Meta:
         fields = (
             'username',

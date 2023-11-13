@@ -1,6 +1,8 @@
 import random
 
+from django.conf import settings
 from django.core.mail import send_mail
+from django.db.models import Avg, Q
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
@@ -29,12 +31,12 @@ from .serializers import (
     GetTokenSerializer,
     ReviewSerializer,
     SignUpSerializer,
-    TitleOutputSerializer,
     TitleInputSerializer,
+    TitleOutputSerializer,
     UserSerializer,
 )
 
-SENDER = 'admin@ya_mdb.ru'
+
 SUBJECT = 'Код подтверждения'
 MESSAGE = ('Привет {username}! \n'
            'Код для получения токена: {confirmation_code}')
@@ -45,39 +47,39 @@ SECOND_REVIEW_PROHIBITION_MESSAGE = {
 USERNAME_OR_EMAIL_OCCUPIED_MESSAGE = 'Такой логин или email уже существуют'
 USERNAME_DOESNOT_EXIST_MESSAGE = {'username': 'Пользователь не найден!'}
 INVALID_CONFIRMATION_CODE_MESSAGE = {
-    'confirmation_code': 'Неверный код подтверждения!'}
+    'confirmation_code': ('Неверный код подтверждения! '
+                          'Запросите новый код через форму регистрации')}
 LOOKUP_FIELD = 'slug'
 
 EMAIL_OCCUPIED_MESSAGE = 'Пользователь с таким email уже существует'
 USERNAME_OCCUPIED_MESSAGE = 'Пользователь с таким username уже существует'
 
 
-class CategotyViewSet(mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin,
-                      mixins.ListModelMixin,
-                      viewsets.GenericViewSet):
+class CategoryGenreMixin(
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
     permission_classes = (IsAdminOrReadOnly,)
+    search_fields = ('name',)
+    lookup_field = LOOKUP_FIELD
+    filter_backends = (filters.SearchFilter,)
+
+
+class CategotyViewSet(CategoryGenreMixin):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = LOOKUP_FIELD
 
 
-class GenreViewSet(mixins.CreateModelMixin,
-                   mixins.DestroyModelMixin,
-                   mixins.ListModelMixin,
-                   viewsets.GenericViewSet):
+class GenreViewSet(CategoryGenreMixin):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('name',)
-    lookup_field = LOOKUP_FIELD
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.all().annotate(
+        rating=Avg('reviews__score')).order_by('-year', 'name')
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilter
     permission_classes = (IsAdminOrReadOnly,)
@@ -101,8 +103,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return self.get_title().reviews.all()
 
     def perform_create(self, serializer):
-        title = self.get_title()
-        serializer.save(author=self.request.user, title=title)
+        serializer.save(author=self.request.user, title=self.get_title())
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -138,29 +139,33 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        if not User.objects.filter(**serializer.validated_data).exists():
-            user1 = User.objects.filter(username=request.data['username'])
-            user2 = User.objects.filter(email=request.data['email'])
-            if user1 and user2:
-                raise ValidationError({
-                    'username': [USERNAME_OCCUPIED_MESSAGE],
-                    'email': [EMAIL_OCCUPIED_MESSAGE],
-                })
-            if user1:
-                raise ValidationError(
-                    {'username': [USERNAME_OCCUPIED_MESSAGE]})
-            if user2:
-                raise ValidationError(
-                    {'email': [EMAIL_OCCUPIED_MESSAGE]})
+        queryset = User.objects.filter(
+            Q(username=request.data['username']) | Q(
+                email=request.data['email'])
+        )
+        if len(queryset) == 2:
+            raise ValidationError({
+                'username': [USERNAME_OCCUPIED_MESSAGE],
+                'email': [EMAIL_OCCUPIED_MESSAGE],
+            })
+        user = queryset.first()
+        if user and user.username != request.data['username']:
+            raise ValidationError(
+                {'email': [EMAIL_OCCUPIED_MESSAGE]})
+        if user and user.email != request.data['email']:
+            raise ValidationError(
+                {'username': [USERNAME_OCCUPIED_MESSAGE]})
         user, created = User.objects.get_or_create(**serializer.validated_data)
-        user.confirmation_code = random.randint(100000, 999999)
+        user.confirmation_code = ''.join(random.choices(
+            settings.CONFIRMATION_CODE_SYMBOLS,
+            k=settings.CONFIRMATION_CODE_LENGTH), )
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
                       username=user.username,
                       confirmation_code=user.confirmation_code
                   ),
-                  from_email=SENDER,
+                  from_email=settings.ADMIN_EMAIL,
                   recipient_list=(user.email,)
                   )
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -175,9 +180,9 @@ class GetTokenView(APIView):
         user = get_object_or_404(User, username=serializer.data['username'])
         if request.data.get('confirmation_code') == user.confirmation_code:
             token = RefreshToken.for_user(user).access_token
-            user.confirmation_code = None
-            user.save()
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
+        user.confirmation_code = None
+        user.save()
         return Response(
             INVALID_CONFIRMATION_CODE_MESSAGE,
             status=status.HTTP_400_BAD_REQUEST,
@@ -199,8 +204,7 @@ class UserViewSet(viewsets.ModelViewSet):
             permission_classes=(IsAuthenticated,))
     def get_current_user(self, request):
         if request.method == 'GET':
-            serializer = UserSerializer(request.user)
-            return Response(serializer.data)
+            return Response(UserSerializer(request.user).data)
         serializer = UserSerializer(
             request.user,
             data=request.data,

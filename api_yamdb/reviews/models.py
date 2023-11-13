@@ -1,8 +1,9 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from api.validators import validate_year
+from .validators import validate_year
 
 ADMIN = 'admin'
 MODERATOR = 'moderator'
@@ -19,34 +20,25 @@ TITLE = (
     'Жанр: {genre:.15}. '
     'Категория: {category:.15}. '
 )
-REVIEW = (
+CONTENT = (
     'Название: {title:.15}. '
     'Текст: {text:.15}. '
     'Автор: {author:.15}. '
-    'Оценка: {score:.15}. '
     'Дата публикации: {pub_date:.15}. '
 )
-SCORE_VALUES = {
-    'min_value': 1,
-    'max_value': 10,
-}
-FIELDS_LENGTH_LIMITS = {
-    'user': {
-        'username': 150,
-        'email': 254,
-        'first_name': 150,
-        'last_name': 150,
-        'role': max(len(role) for _, role in ROLE_CHOICE),
-        'confirmation_code': 6,
-    },
-    'genre_category': {
-        'name': 256,
-        'slug': 50,
-    },
-    'title': {
-        'name': 256,
-    }
-}
+COMMENT = ('{content_str}'
+           'Комментарий: {comment:.15}')
+REVIEW = ('{content_str}'
+          'Оценка: {score:.15}')
+GENRETITLE = ('Жанр: {genre:.15}. '
+              'Произведение: {title:.15}. ')
+MIN_SCORE = 1
+MAX_SCORE = 10
+LENGTH_LIMITS_USER_FIELDS = 150
+LENGTH_LIMITS_USER_EMAIL = 254
+LENGTH_LIMITS_USER_ROLE = max(len(role) for _, role in ROLE_CHOICE)
+LENGTH_LIMITS_OBJECT_NAME = 256
+LENGTH_LIMITS_OBJECT_SLUG = 50
 
 MODELS_LOCALISATIONS = {
     'user': ('Пользователь', 'Пользователи'),
@@ -63,37 +55,37 @@ class User(AbstractUser):
 
     username = models.CharField(
         db_index=True,
-        max_length=FIELDS_LENGTH_LIMITS['user']['username'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         unique=True,
     )
     email = models.EmailField(
         db_index=True,
-        max_length=FIELDS_LENGTH_LIMITS['user']['email'],
+        max_length=LENGTH_LIMITS_USER_EMAIL,
         unique=True,
     )
     first_name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['first_name'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         blank=True,
     )
     last_name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['last_name'],
+        max_length=LENGTH_LIMITS_USER_FIELDS,
         blank=True,
     )
     bio = models.TextField(blank=True)
     role = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['role'],
+        max_length=LENGTH_LIMITS_USER_ROLE,
         default=USER,
         choices=ROLE_CHOICE,
     )
     confirmation_code = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['user']['confirmation_code'],
+        max_length=settings.CONFIRMATION_CODE_LENGTH,
         blank=True,
-        null=True
+        null=True,
     )
 
     @property
     def is_admin(self):
-        return self.role == ADMIN or self.is_staff or self.is_superuser
+        return self.role == ADMIN or self.is_staff
 
     @property
     def is_moderator(self):
@@ -107,7 +99,7 @@ class User(AbstractUser):
         return self.username
 
     class Meta:
-        ordering = ('-date_joined',)
+        ordering = ('username',)
         verbose_name = MODELS_LOCALISATIONS['user'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['user'][1]
 
@@ -116,9 +108,9 @@ class GenreCategoryAbstractModel(models.Model):
     """Абстрактная модель для жанров и категорий."""
 
     name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['genre_category']['name'])
+        max_length=LENGTH_LIMITS_OBJECT_NAME)
     slug = models.SlugField(
-        max_length=FIELDS_LENGTH_LIMITS['genre_category']['slug'],
+        max_length=LENGTH_LIMITS_OBJECT_SLUG,
         unique=True,
     )
 
@@ -127,7 +119,7 @@ class GenreCategoryAbstractModel(models.Model):
 
     class Meta:
         abstract = True
-        ordering = ('slug',)
+        ordering = ('name',)
 
 
 class Genre(GenreCategoryAbstractModel):
@@ -150,7 +142,7 @@ class Title(models.Model):
     """Модель произведений."""
 
     name = models.CharField(
-        max_length=FIELDS_LENGTH_LIMITS['title']['name'])
+        max_length=LENGTH_LIMITS_OBJECT_NAME)
     year = models.IntegerField(validators=(validate_year,))
     description = models.TextField(blank=True)
     genre = models.ManyToManyField(Genre, through='GenreTitle')
@@ -177,7 +169,7 @@ class Title(models.Model):
         verbose_name_plural = MODELS_LOCALISATIONS['title'][1]
 
 
-class ReviewTitleAbstractModel(models.Model):
+class ContentAbstractModel(models.Model):
     """Абстрактная модель для отзывов и комментариев."""
 
     author = models.ForeignKey(
@@ -192,49 +184,56 @@ class ReviewTitleAbstractModel(models.Model):
         abstract = True
         ordering = ('-pub_date',)
 
+    def __str__(self):
+        return CONTENT.format(
+            title=self.title,
+            text=self.text,
+            author=self.author,
+            pub_date=self.pub_date,
+        )
 
-class Review(ReviewTitleAbstractModel):
+
+class Review(ContentAbstractModel):
     """Модель отзывов."""
 
     score = models.SmallIntegerField(
         validators=(
-            MinValueValidator(SCORE_VALUES['min_value']),
-            MaxValueValidator(SCORE_VALUES['max_value']),
+            MinValueValidator(MIN_SCORE),
+            MaxValueValidator(MAX_SCORE),
         ),
     )
 
-    class Meta(ReviewTitleAbstractModel.Meta):
+    class Meta(ContentAbstractModel.Meta):
         verbose_name = MODELS_LOCALISATIONS['review'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['review'][1]
         constraints = (
             models.UniqueConstraint(
-                fields=('title', 'author', ),
+                fields=('title', 'author',),
                 name='unique reveview'
             ),
         )
 
     def __str__(self):
         return REVIEW.format(
-            title=self.title,
-            text=self.text,
-            author=self.author,
+            content_str=super().__str__(),
             score=self.score,
-            pub_date=self.pub_date,
         )
 
 
-class Comment(ReviewTitleAbstractModel):
+class Comment(ContentAbstractModel):
     """Модель комментариев."""
 
     review = models.ForeignKey(
         Review, on_delete=models.CASCADE, related_name='comments')
 
-    class Meta(ReviewTitleAbstractModel.Meta):
+    class Meta(ContentAbstractModel.Meta):
         verbose_name = MODELS_LOCALISATIONS['comment'][0]
         verbose_name_plural = MODELS_LOCALISATIONS['comment'][1]
 
     def __str__(self):
-        return self.text[:30]
+        return COMMENT.format(
+            content_str=super().__str__(),
+            comment=self.text[:30])
 
 
 class GenreTitle(models.Model):
@@ -242,4 +241,7 @@ class GenreTitle(models.Model):
     title = models.ForeignKey(Title, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f'{self.genre} {self.title}'
+        return GENRETITLE.format(
+            genre=self.genre,
+            title=self.title
+        )
