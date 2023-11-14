@@ -2,6 +2,7 @@ from datetime import date
 import re
 
 from django.core.exceptions import ValidationError
+from django.conf import settings
 
 
 INVALID_USERNAME_MESSAGE = ('Имя пользователя содержит недопустимые символы: '
@@ -9,11 +10,10 @@ INVALID_USERNAME_MESSAGE = ('Имя пользователя содержит н
 INVALID_USERNAME_ME_MESSAGE = 'Нельзя использовать имя пользователя <me>'
 WRONG_YEAR_MESSAGE = ('Нельзя публиковать произведения из будущего! '
                       '{year} > {current_year}')
-USER_PROFILE_PATH = 'me'
 
 
 def validate_username(username):
-    if username == USER_PROFILE_PATH:
+    if username == settings.USER_PROFILE_PATH:
         raise ValidationError(INVALID_USERNAME_MESSAGE,
                               params={'username': username})
     invalid_symbols = re.sub(r'[\w@.+-]', '', username)

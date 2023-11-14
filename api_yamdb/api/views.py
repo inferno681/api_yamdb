@@ -1,9 +1,9 @@
 import random
 
-from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db.models import Avg, Q
+from django.db import IntegrityError
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
@@ -25,7 +25,6 @@ from .permissions import (
     IsAuthorOrStuffOrReadOnly,
 )
 from reviews.models import Category, Genre, Review, Title, User
-from reviews.validators import USER_PROFILE_PATH
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -140,28 +139,21 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
-        email = serializer.validated_data['email']
         try:
-            user, created = User.objects.filter(
-                Q(username=username) | Q(email=email)).get_or_create(
-                defaults={
-                    'username': username,
-                    'email': email,
-                }
-            )
-        except MultipleObjectsReturned:
-            raise ValidationError({
-                'username': [USERNAME_OCCUPIED_MESSAGE],
-                'email': [EMAIL_OCCUPIED_MESSAGE],
-            })
-        if not created and (username != user.username or email != user.email):
-            if user.username != username:
-                raise ValidationError({'email': [EMAIL_OCCUPIED_MESSAGE]})
-            raise ValidationError({'username': [USERNAME_OCCUPIED_MESSAGE]})
+            user, create = User.objects.get_or_create(
+                **serializer.validated_data)
+        except IntegrityError:
+            message = {}
+            if User.objects.filter(
+                    username=serializer.validated_data['username']).exists():
+                message['username'] = [USERNAME_OCCUPIED_MESSAGE]
+            if User.objects.filter(
+                    email=serializer.validated_data['email']).exists():
+                message['email'] = [EMAIL_OCCUPIED_MESSAGE]
+            raise ValidationError(message)
         user.confirmation_code = ''.join(random.choices(
             settings.CONFIRMATION_CODE_SYMBOLS,
-            k=settings.CONFIRMATION_CODE_LENGTH),)
+            k=settings.CONFIRMATION_CODE_LENGTH))
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
@@ -206,7 +198,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(methods=('GET', 'PATCH'),
             detail=False,
-            url_path=USER_PROFILE_PATH,
+            url_path=settings.USER_PROFILE_PATH,
             permission_classes=(IsAuthenticated,))
     def get_current_user(self, request):
         if request.method == 'GET':
