@@ -1,10 +1,9 @@
 import random
 
-from django.db import IntegrityError
-from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db.models import Avg, Q
+from django.db import IntegrityError
+from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, status, viewsets
@@ -26,7 +25,6 @@ from .permissions import (
     IsAuthorOrStuffOrReadOnly,
 )
 from reviews.models import Category, Genre, Review, Title, User
-from reviews.validators import USER_PROFILE_PATH
 from .serializers import (
     CategorySerializer,
     CommentSerializer,
@@ -176,8 +174,8 @@ class GetTokenView(APIView):
         serializer.is_valid(raise_exception=True)
         user = get_object_or_404(User, username=serializer.data['username'])
         if (
-                request.data.get('confirmation_code')
-                and request.data.get('confirmation_code') == user.confirmation_code
+            request.data.get('confirmation_code')
+            and request.data.get('confirmation_code') == user.confirmation_code
         ):
             token = RefreshToken.for_user(user).access_token
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
@@ -200,7 +198,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(methods=('GET', 'PATCH'),
             detail=False,
-            url_path=USER_PROFILE_PATH,
+            url_path=settings.USER_PROFILE_PATH,
             permission_classes=(IsAuthenticated,))
     def get_current_user(self, request):
         if request.method == 'GET':
