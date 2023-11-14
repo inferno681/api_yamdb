@@ -1,5 +1,6 @@
 import random
 
+from django.db import IntegrityError
 from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.core.mail import send_mail
@@ -140,28 +141,21 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = SignUpSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data['username']
-        email = serializer.validated_data['email']
         try:
-            user, created = User.objects.filter(
-                Q(username=username) | Q(email=email)).get_or_create(
-                defaults={
-                    'username': username,
-                    'email': email,
-                }
-            )
-        except MultipleObjectsReturned:
-            raise ValidationError({
-                'username': [USERNAME_OCCUPIED_MESSAGE],
-                'email': [EMAIL_OCCUPIED_MESSAGE],
-            })
-        if not created and (username != user.username or email != user.email):
-            if user.username != username:
-                raise ValidationError({'email': [EMAIL_OCCUPIED_MESSAGE]})
-            raise ValidationError({'username': [USERNAME_OCCUPIED_MESSAGE]})
+            user, create = User.objects.get_or_create(
+                **serializer.validated_data)
+        except IntegrityError:
+            message = {}
+            if User.objects.filter(
+                    username=serializer.validated_data['username']).exists():
+                message['username'] = [USERNAME_OCCUPIED_MESSAGE]
+            if User.objects.filter(
+                    email=serializer.validated_data['email']).exists():
+                message['email'] = [EMAIL_OCCUPIED_MESSAGE]
+            raise ValidationError(message)
         user.confirmation_code = ''.join(random.choices(
             settings.CONFIRMATION_CODE_SYMBOLS,
-            k=settings.CONFIRMATION_CODE_LENGTH),)
+            k=settings.CONFIRMATION_CODE_LENGTH))
         user.save()
         send_mail(subject=SUBJECT,
                   message=MESSAGE.format(
@@ -182,8 +176,8 @@ class GetTokenView(APIView):
         serializer.is_valid(raise_exception=True)
         user = get_object_or_404(User, username=serializer.data['username'])
         if (
-            request.data.get('confirmation_code')
-            and request.data.get('confirmation_code') == user.confirmation_code
+                request.data.get('confirmation_code')
+                and request.data.get('confirmation_code') == user.confirmation_code
         ):
             token = RefreshToken.for_user(user).access_token
             return Response({'token': str(token)}, status=status.HTTP_200_OK)
