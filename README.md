@@ -75,4 +75,4 @@ python csv_import
 ### Автор
 
 - Kirill Konovalov, GitHub: [https://github.com/KeKcOn](https://github.com/KeKcOn)
-- Vasily Stakrotsky, GitHub: [https://github.com/inferno681](https://github.com/inferno681)
+- Vasilii Stakrotckii, GitHub: [https://github.com/inferno681](https://github.com/inferno681)
